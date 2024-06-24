@@ -1,7 +1,9 @@
 import 'package:bms/ApiCalls/apiCalls.dart';
 import 'package:bms/Screens/AddFormScreen.dart';
 import 'package:bms/Screens/EnquirefullInfo.dart';
+import 'package:bms/Screens/LanderPage.dart';
 import 'package:bms/controller/enquireCardsController.dart';
+import 'package:bms/main.dart';
 import 'package:bms/pojos/models/Enquirepojo.dart';
 import 'package:bms/pojos/models/FilterDataPojo.dart';
 import 'package:bms/widgets/EnquireCardDesign.dart';
@@ -34,6 +36,7 @@ class _MyEnquireState extends State<MyEnquire> {
 
 
                   String dropdowndata="select one";
+                  String proifilepic="";
 
  GetAllDropdownEnquire getAllDropDownData=GetAllDropdownEnquire();
  EnquireCardsController  enquireCardsController=Get.put(EnquireCardsController());
@@ -49,8 +52,12 @@ getdataForFirst();
 
 getdataForFirst()async{
       SharedPreferences prefs=await SharedPreferences.getInstance();
+      proifilepic=prefs.getString("profile_path")??"";
   getdata([],[prefs.getInt("user_id")??1],[],[],'09/24/2022','','','','','','50');
     getAllDropDownData=await ApiCalls.getAllDropDOwnsEnquire();
+    setState(() {
+      proifilepic;
+    });
 }
 
 
@@ -62,6 +69,7 @@ getdataForFirst()async{
 
      setState(() {
        getAllDropDownData;
+       
      });
   }
 GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -71,6 +79,71 @@ GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
              List<String> lsitdata=["50","100","GetAll"];
     return Scaffold(
       key: _scaffoldKey,
+      drawer:  Drawer(
+              width: MediaQuery.of(context).size.width*0.6,
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
+SizedBox(height: MediaQuery.of(context).size.width*0.5,),
+
+     CircleAvatar(
+
+                             radius: 38,
+                            backgroundColor: Colors.transparent,
+                            
+                              child: Image(image: NetworkImage("https://portalwiz.net/laravelapi/storage/app/"+proifilepic))
+                            ),
+
+SizedBox(height: MediaQuery.of(context).size.width*0.1,),
+                  ListTile(
+                    title:const Text("Home"),
+                    leading: const Icon(Icons.home),
+
+                    onTap: (){
+                      Navigator.pop(context);
+                              Navigator.push(context, MaterialPageRoute(builder: (context)=>LanderPage()));
+                    },
+                  ),
+                  ListTile(
+                    title:const Text("Gallery"),
+                     leading: const Icon(Icons.picture_in_picture),
+
+                    onTap: (){
+                      Navigator.pop(context);
+               
+                    },
+                  ),
+                  ListTile(
+                    title:const Text("Enquiries"),
+                    leading: const Icon(Icons.question_answer_outlined),
+                    onTap: (){
+                      Navigator.pop(context);
+                    
+                    },
+                  ),
+                  ListTile(
+                    title:const Text("Log Out"),
+                    leading: const Icon(Icons.logout_outlined),
+                    onTap: ()async{
+                      Navigator.pop(context);
+                      SharedPreferences sharedPreferences =await SharedPreferences.getInstance();
+                   await sharedPreferences.clear();
+          
+                   Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=> MyHomePage(title: "")));
+                    },
+                  ),
+                  ListTile(
+                    title:const Text("Version 1.1.0"),
+                    leading: const Icon(Icons.mobile_friendly),
+                    onTap: ()async{
+                  
+          
+                   showAboutDialog(context: context);
+                    },
+                  ),
+                ],
+              ),
+            ),
       endDrawer: Drawer(
         
         semanticLabel: "Filter",
@@ -362,7 +435,7 @@ GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
         }
       ),
       appBar: AppBar(
-        title: Text("Enquiry CRM"),
+        title: Text("Enquiries"),
         centerTitle: true,
         actions: [Padding(
           padding: const EdgeInsets.all(5.0),
@@ -467,11 +540,11 @@ columnWidths: {
                   child: Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(11)
+                     
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(8.0),
-                      child: Text("Sorry no Enquires for user",style: TextStyle(fontSize: 16,fontWeight: FontWeight.w500),),
+                      child: Text("No Enquiries",style: TextStyle(fontSize: 16,fontWeight: FontWeight.w500),),
                     ),
                   ),
                 ),

@@ -22,7 +22,7 @@ class GetAllDataofEnquire {
   String? enqDetailMsg;
   String? nextAppointmentDate;
   int? enquiryModeId;
-  int? enquiryTypeId;
+  String? enquiryTypeId;
   String? companyName;
   int? applicantTypeId;
   String? dataSource;

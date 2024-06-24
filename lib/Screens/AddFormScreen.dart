@@ -7,6 +7,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
+import 'package:get/get_connect/http/src/utils/utils.dart';
 import 'package:lottie/lottie.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:getwidget/getwidget.dart';
@@ -119,36 +120,6 @@ Navigator.pop(context);
   }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-double page=1/4;
-
 @override
   void initState() {
     getDataofDropdownApi();
@@ -169,570 +140,480 @@ double page=1/4;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      floatingActionButton: FloatingActionButton(
-        
-        foregroundColor: Colors.blueAccent.shade200,
-        onPressed: 
-_validateForm
-      ,child: Text("Save",style: TextStyle(color: Colors.black),),),
-      appBar: AppBar(
-        title: Text("Clients Information"),
-        centerTitle: true,
-        bottom: PreferredSize(preferredSize: Size.fromHeight(30), child:  Center(
-          child: GFProgressBar(
-               percentage: page,
-               lineHeight: 10,
-               width:372,
-               radius: 150,
-               backgroundColor : Colors.white,
-               progressBarColor: Colors.blueAccent.shade100,
-          ),
-        )),
-      ),
-      body:PageView(
-      onPageChanged: (val){
-        setState(() {
-          page=(val+1)/4;
-        });
-      },
-        children: [
+      backgroundColor: Colors.blueAccent.shade100,
 
-              SingleChildScrollView(
-                child: Padding(
-                  
-                  padding: const EdgeInsets.all(15.0),
-                  child: Column(
-                    children: [
-                      SizedBox(height: 40,),
-                         CatdTitle(title: "Personal Details",),
-                         
-                          SizedBox(height: 20,),
-                                TextFormField(
-                                  
-                                  controller: firstname,
-                                  decoration: InputDecoration(
-                                    contentPadding: EdgeInsets.zero,
-                                    label: Text("First Name"),
-                                 border: UnderlineInputBorder(borderSide: BorderSide()),
-                                    isDense: true
-                                  ),
-                                ),
-                                   SizedBox(height: 20,),
-                                TextFormField(
-                                  controller: lastname,
-                                  decoration: InputDecoration(
-                                     contentPadding: EdgeInsets.zero,
-                                    label: Text("Last Name"),
-                                    border: UnderlineInputBorder(borderSide: BorderSide()),
-                                    isDense: true
-                                  ),
-                                ),
-                                SizedBox(height: 20,),
-                                TextFormField(
-                                  controller: emailaddress,
-                                  decoration: InputDecoration(
-                                    label: Text("Email Address"),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10)
-                                    ),
-                                    isDense: true
-                                  ),
-                                ),
-                                SizedBox(height: 20,),
-                                TextFormField(
-                                  controller: companyname,
-                                  decoration: InputDecoration(
-                                    label: Text("Comapny Name"),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10)
-                                    ),
-                                    isDense: true
-                                  ),
-                                ),
-                                
-                                                  SizedBox(height: 20,),
-                          
-                                TextFormField(
-                                  controller: whatsappno,
-                                  keyboardType: TextInputType.number,
-                                  decoration: InputDecoration(
-                                    label: Text("Whatsup no"),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10)
-                                    ),
-                                    isDense: true
-                                  ),
-                                ),
-                                                  SizedBox(height: 20,),
-                          
-                                TextFormField(
-                                  keyboardType: TextInputType.number,
-                                  controller: phoneno,
-                                  decoration: InputDecoration(
-                                    label: Text("Phone no"),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10)
-                                    ),
-                                    isDense: true
-                                  ),
-                                ),
-                  
-                    ],
+      body: SingleChildScrollView(
+        child: Column(
+                      
+                      children: [
+                       SizedBox(height: 50),
+              Container(
+                width: MediaQuery.of(context).size.width,
+                child: Center(
+                  child: Text(
+                    "Enquiry Form ",
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.w400, color: Colors.white),
                   ),
                 ),
               ),
-
-
-               Padding(
-                 padding: const EdgeInsets.all(15.0),
-                 child: SingleChildScrollView(
-                   child: Column(
-                            children: [
-                                               SizedBox(height: 40,),
-                             CatdTitle(title: "Address Details",),
-                          
-                             
-                              SizedBox(height: 25,),
-                          
-                               TextFormField(
-                                
-                          
-                                decoration: InputDecoration(
-                                  label: Text("Address"),
-                                  hintText: "Address",
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8)
-                                  )
-                                ),
-                                controller: address,
-                             minLines: 5, // any number you need (It works as the rows for the textarea)
-                             keyboardType: TextInputType.multiline,
-                             maxLines: null,
-                          ),
-                           SizedBox(height: 20,),
-                             TextFormField(
-                                    controller: city,
-                                    decoration: InputDecoration(
-                                      label: Text("City"),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(10)
-                                      ),
-                                      isDense: true
-                                    ),
-                                  ),
-                                   SizedBox(height: 20,),
-                          
-                             TextFormField(
-                                    controller: state,
-                                    decoration: InputDecoration(
-                                      label: Text("State"),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(10)
-                                      ),
-                                      isDense: true
-                                    ),
-                                  ),
-                                   SizedBox(height: 20,),
-                          
-                             TextFormField(
-                                    controller: pincode,
-                                  keyboardType: TextInputType.number,
-                                    decoration: InputDecoration(
-                                      
-                                      label: Text("Pincode"),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(10)
-                                      ),
-                                      isDense: true
-                                    ),
-                                  ),
-                          
-                            
-                            ],
-                          ),
-                 ),
-               ),
-
-
-
-
-
- Padding(
-                    padding: EdgeInsets.fromLTRB(15, 0, 15, 0),
-                    child: SingleChildScrollView(
-                      child: Column(
-                        children: [
-                      
-                                      SizedBox(height: 40,),
-                         CatdTitle(title: "Enquiry Details",),
-                          SizedBox(height: 25,),
-                         TextFormField(
-                                
-                          
-                                decoration: InputDecoration(
-                                  label: Text("Enquiry Details"),
-                                  hintText: "Enquiry Details",
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8)
-                                  )
-                                ),
-                                controller: enquireDetails,
-                             minLines: 3, // any number you need (It works as the rows for the textarea)
-                             keyboardType: TextInputType.multiline,
-                             maxLines: null,
-                          ),
-                         
-                                   SizedBox(height: 20,),
-                          
-                           
-                                   
-                          
-                      
-                        
-                      
-                      
-                                  Container(
-                                  
-                               
-                                  height: MediaQuery.of(context).size.height*0.065,
-                                  width: double.infinity,
-                                     decoration: BoxDecoration(
-                      
-                                    borderRadius: BorderRadius.circular(15),
-                                    border: Border.all(color: Colors.black54),
-                                    color: Colors.white
-                                  ),
-                                  child: DropdownButton<String>(
-                                    underline: Text(""),
-                                    isExpanded: true,
-                                    borderRadius: BorderRadius.circular(25),
-                                    hint: Padding(
-                                      padding: EdgeInsets.fromLTRB(15, 0, 0, 0),
-                                      child: Text(enquiredropdown.enquiryType??"",style: TextStyle(fontSize: 16,color: Colors.black),textAlign: TextAlign.center,)),
-                                    items: (getAllDropDownData.enquiryType??[]).map((item)=>DropdownMenuItem<String>(
-                                    value: item.enquiryType,
-                                    child: Text(item.enquiryType??"",style: TextStyle(fontSize: 14,color: Colors.black),),
-                                  )).toList(), onChanged:(item){
-                            getAllDropDownData.enquiryType!.forEach((element) {
-                                          (element.enquiryType==item)?setState(() {
-                                            enquiredropdown=element;
-                                          }):null;
-                                     });
-                                
-                    
-                                  } )),
-                                    SizedBox(height: 20,),
-                                  Container(
-                                  
-                               
-                                  height: MediaQuery.of(context).size.height*0.065,
-                                  width: double.infinity,
-                                     decoration: BoxDecoration(
-                      
-                                    borderRadius: BorderRadius.circular(15),
-                                    border: Border.all(color: Colors.black54),
-                                    color: Colors.white
-                                  ),
-                                  child: DropdownButton<String>(
-                                    underline: Text(""),
-                                    isExpanded: true,
-                                    borderRadius: BorderRadius.circular(25),
-                                    hint: Padding(
-                                      padding: EdgeInsets.fromLTRB(15, 0, 0, 0),
-                                      child: Text(enquireStatusDropdown.enquiryStatus??"",style: TextStyle(fontSize: 16,color: Colors.black),textAlign: TextAlign.center,)),
-                                    items:  (getAllDropDownData.enquiryStatus??[]).map((item)=>DropdownMenuItem<String>(
-                                    value: item.enquiryStatus,
-                                    child: Text(item.enquiryStatus??"",style: TextStyle(fontSize: 14,color: Colors.black),),
-                                  )).toList(), onChanged:(item){
-                             getAllDropDownData.applicantType!.forEach((element) {
-                                          (element.applicantType==item)?setState(() {
-                                            applicantDropdown=element;
-                                          }):null;
-                                     });
-                                
-                    
-                                    print(item);
-                                  } )),
-                                    SizedBox(height: 20,),
-                                           TextFormField(
-                                    controller: amount,
-                                  keyboardType: TextInputType.number,
-                                    decoration: InputDecoration(
-                                      
-                                      label: Text("Amount"),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(10)
-                                      ),
-                                      isDense: true
-                                    ),
-                                  ),
-                                    SizedBox(height: 20,),
-                                  Container(
-                                  
-                               
-                                  height: MediaQuery.of(context).size.height*0.065,
-                                  width: double.infinity,
-                                     decoration: BoxDecoration(
-                      
-                                    borderRadius: BorderRadius.circular(15),
-                                    border: Border.all(color: Colors.black54),
-                                    color: Colors.white
-                                  ),
-                                  child: DropdownButton<String>(
-                                    underline: Text(""),
-                                    isExpanded: true,
-                                    borderRadius: BorderRadius.circular(25),
-                                    hint: Padding(
-                                      padding: EdgeInsets.fromLTRB(15, 0, 0, 0),
-                                      child: Text(enquireSourceDropdown.enquirySource??"",style: TextStyle(fontSize: 16,color: Colors.black),textAlign: TextAlign.center,)),
-                                    items: (getAllDropDownData.enquirySources??[]).map((item)=>DropdownMenuItem<String>(
-                                    value: item.enquirySource,
-                                    child: Text(item.enquirySource??"",style: TextStyle(fontSize: 14,color: Colors.black),),
-                                  )).toList(), onChanged:(item){
-                                  getAllDropDownData.enquirySources!.forEach((element) {
-                                          (element.enquirySource==item)?setState(() {
-                                            enquireSourceDropdown=element;
-                                          }):null;
-                                     });
-                                
-                    
-                                    print(item);
-                                  } )),
-                                    SizedBox(height: 20,),
-                                      TextFormField(
-                                    controller: dataSource,
-                                    decoration: InputDecoration(
-                                      label: Text("Data Source"),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(10)
-                                      ),
-                                      isDense: true
-                                    ),
-                                  ),
-                                    SizedBox(height: 20,),
-                                  Container(
-                                  
-                               
-                                  height: MediaQuery.of(context).size.height*0.065,
-                                  width: double.infinity,
-                                     decoration: BoxDecoration(
-                      
-                                    borderRadius: BorderRadius.circular(15),
-                                    border: Border.all(color: Colors.black54),
-                                    color: Colors.white
-                                  ),
-                                  child: DropdownButton<String>(
-                                    underline: Text(""),
-                                    isExpanded: true,
-                                    borderRadius: BorderRadius.circular(25),
-                                    hint: Padding(
-                                      padding: EdgeInsets.fromLTRB(15, 0, 0, 0),
-                                      child: Text(leadLevelDropdown.leadLevel??"",style: TextStyle(fontSize: 16,color: Colors.black),textAlign: TextAlign.center,)),
-                                    items: (getAllDropDownData.leadLevel??[]).map((item)=>DropdownMenuItem<String>(
-                                    value: item.leadLevel,
-                                    child: Text(item.leadLevel??"",style: TextStyle(fontSize: 14,color: Colors.black),),
-                                  )).toList(), onChanged:(item){
-                              getAllDropDownData.leadLevel!.forEach((element) {
-                                          (element.leadLevel==item)?setState(() {
-                                            leadLevelDropdown=element;
-                                          }):null;
-                                     });
-                                
-                    
-                                  } )),
-                                    SizedBox(height: 20,),
-                                  Container(
-                                  
-                               
-                                  height: MediaQuery.of(context).size.height*0.065,
-                                  width: double.infinity,
-                                     decoration: BoxDecoration(
-                      
-                                    borderRadius: BorderRadius.circular(15),
-                                    border: Border.all(color: Colors.black54),
-                                    color: Colors.white
-                                  ),
-                                  child: DropdownButton<String>(
-                                    menuMaxHeight: 150,
-                                    underline: Text(""),
-                                    isExpanded: true,
-                                    borderRadius: BorderRadius.circular(25),
-                                    hint: Padding(
-                                      padding: EdgeInsets.fromLTRB(15, 0, 0, 0),
-                                      child: Text((assingedTo.firstName??""+" "+(assingedTo.lastName??"")),style: TextStyle(fontSize: 16,color: Colors.black),textAlign: TextAlign.center,)),
-                                    items: (getAllDropDownData.assingedTo??[]).map((item)=>DropdownMenuItem<String>(
-                                    value: (item.firstName??""+" "+(item.lastName??"")),
-                                    child: Text((item.firstName??""+" "+(item.lastName??"")),style: TextStyle(fontSize: 14,color: Colors.black),),
-                                  )).toList(), onChanged:(item){
-        
-                                    getAllDropDownData.assingedTo!.forEach((element) {
-                                          (element.firstName==item)?setState(() {
-                                            assingedTo=element;
-                                          }):null;
-                                     });
-                                
-                    
-                                  } )),
-                                    SizedBox(height: 20,),
-                                  // Container(
-                                  
-                               
-                                  // height: MediaQuery.of(context).size.height*0.065,
-                                  // width: double.infinity,
-                                  //    decoration: BoxDecoration(
-                      
-                                  //   borderRadius: BorderRadius.circular(15),
-                                  //   border: Border.all(color: Colors.black54),
-                                  //   color: Colors.white
-                                  // ),
-                                  // child: DropdownButton<String>(
-                                  //   underline: Text(""),
-                                  //   isExpanded: true,
-                                  //   borderRadius: BorderRadius.circular(25),
-                                  //   hint: Padding(
-                                  //     padding: EdgeInsets.fromLTRB(15, 0, 0, 0),
-                                  //     child: Text(ass,style: TextStyle(fontSize: 16,color: Colors.grey),textAlign: TextAlign.center,)),
-                                  //   items: lsitdata.map((item)=>DropdownMenuItem<String>(
-                                  //   value: item,
-                                  //   child: Text(item,style: TextStyle(fontSize: 14),),
-                                  // )).toList(), onChanged:(item){
-                                  //   setState(() {
-                                  //     datadrop=item.toString();
-                                  //   });
-                                  //   print(item);
-                                  // } )),
-                                                  SizedBox(height: 30,),
-
-
-
-
-                                                  
               
+              
+                           
+                            SizedBox(height: 20,),
+                                  Container(
+                                    color: Colors.white,
+                                    margin: EdgeInsets.symmetric(horizontal: 20),
+                                    height: MediaQuery.of(context).size.height*0.88,
+                                    width: MediaQuery.of(context).size.width,
+                                    child: SingleChildScrollView(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                            SizedBox(height: 10,),
+                                               Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+                        child: Text("Personal Info", style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500)),
+                      ),
+                                          Row(
+                                                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                                                children: [
+                                                                 
+                                                                  Container(
+                                                                    height: 60,
+                                                                    width: MediaQuery.of(context).size.width * 0.4,
+                                                                    child: TextField(
+                                                                      controller: firstname,
+                                                                      decoration: InputDecoration(
+                                                                        labelText: "Fname",
+                                                                        contentPadding: EdgeInsets.symmetric(horizontal: 5),
+                                                                        border: OutlineInputBorder(),
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                                  Container(
+                                                                    height: 60,
+                                                                    width: MediaQuery.of(context).size.width * 0.4,
+                                                                    child: TextField(
+                                                                      controller: lastname,
+                                                                      decoration: InputDecoration(
+                                                                        labelText: "Lname",
+                                                                        contentPadding: EdgeInsets.symmetric(horizontal: 5),
+                                                                        border: OutlineInputBorder(),
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                      
+                                      Row(
+                                                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                                            children: [
+                                                              Container(
+                                                                height: 60,
+                                                                width: MediaQuery.of(context).size.width * 0.4,
+                                                                child: TextField(
+                                                                  controller: phoneno,
+                                                                  decoration: InputDecoration(
+                                                                    labelText: "Phone",
+                                                                    contentPadding: EdgeInsets.symmetric(horizontal: 5),
+                                                                    border: OutlineInputBorder(),
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                              Container(
+                                                                height: 60,
+                                                                width: MediaQuery.of(context).size.width * 0.4,
+                                                                child: TextField(
+                                                                  controller: whatsappno,
+                                                                  decoration: InputDecoration(
+                                                                    labelText: "Whatsapp",
+                                                                    contentPadding: EdgeInsets.symmetric(horizontal: 5),
+                                                                    border: OutlineInputBorder(),
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                          Padding(
+                                                            padding: const EdgeInsets.symmetric(horizontal: 15),
+                                                            child: Text("Email", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                                                          ),
+                                                          Padding(
+                                                            padding: const EdgeInsets.symmetric(horizontal: 15),
+                                                            child: TextField(
+                                                              controller: emailaddress,
+                                                              textAlignVertical: TextAlignVertical.center,
+                                                              decoration: InputDecoration(
+                                                                prefixIcon: Padding(
+                                                                  padding: const EdgeInsets.all(8.0),
+                                                                  child: Icon(Icons.email_outlined, color: Colors.grey.shade300),
+                                                                ),
+                                                                contentPadding: EdgeInsets.symmetric(horizontal: 5),
+                                                                border: OutlineInputBorder(),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                          SizedBox(height: 15),
+                                                          Row(
+                                                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                                            children: [
+                                                              Container(
+                                                                height: 60,
+                                                                width: MediaQuery.of(context).size.width * 0.4,
+                                                                child: TextField(
+                                                                  controller: state,
+                                                                  keyboardType: TextInputType.text,
+                                                                  decoration: InputDecoration(
+                                                                    labelText: "State",
+                                                                    
+                                                                    contentPadding: EdgeInsets.symmetric(horizontal: 5),
+                                                                    border: OutlineInputBorder(),
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                              Container(
+                                                                height: 60,
+                                                                width: MediaQuery.of(context).size.width * 0.4,
+                                                                child: TextField(
+                                                                  controller: city,
+                                                                  keyboardType: TextInputType.text,
+                                                                  decoration: InputDecoration(
+                                                                    labelText: "City",
+                                                                    contentPadding: EdgeInsets.symmetric(horizontal: 5),
+                                                                    border: OutlineInputBorder(),
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                          Row(
+                                                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                                            children: [
+                                                              Container(
+                                                                height: 60,
+                                                                width: MediaQuery.of(context).size.width * 0.4,
+                                                                child: TextField(
+                                                                  controller: pincode,
+                                                                  keyboardType: TextInputType.number,
+                                                                  decoration: InputDecoration(
+                                                                    labelText: "Pin",
+                                                                    
+                                                                    contentPadding: EdgeInsets.symmetric(horizontal: 5,vertical: 60),
+                                                                    border: OutlineInputBorder(),
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                     Container(
+                                      
+                                      width: MediaQuery.of(context).size.width*0.4,
+                                                                     
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(5.0),
+                                        child: DropdownMenu(
+                                          width: MediaQuery.of(context).size.width*0.4,
+                                          hintText: enquiredropdown.enquiryType,
+                                          dropdownMenuEntries: (getAllDropDownData.enquiryType??[]).map(( item) {
+                                            return DropdownMenuEntry(
+                                              value: item.enquiryType,
+                                              label: item.enquiryType??"",
+                                            );
+                                          }).toList(),
+                                          onSelected:(item){
+                                                                  (getAllDropDownData.enquiryType??[]).forEach((element) {
+                                              (element.enquiryType==item)?setState(() {
+                                                enquiredropdown=element;
+                                              }):null;
+                                         });}
+                                        ),
+                                      ),
+                                                                      ),
+                                                            ],
+                                                          ),
+                                      
+                                      
+                                                            Padding(
+                                                            padding: const EdgeInsets.symmetric(horizontal: 15),
+                                                            child: Text("Address", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                                                          ),
+                                                          Padding(
+                                                            padding: const EdgeInsets.symmetric(horizontal: 15),
+                                                            child: TextField(
+                                                          
+                                                              maxLines: 2,
+                                                              controller:address ,
+                                                              decoration: InputDecoration(
+                                                                border: OutlineInputBorder(
+                                                                  borderSide: BorderSide(color: Colors.grey.shade300)
+                                                                )
+                                                              )
+                                                            ),
+                                                          ),
+                                      SizedBox(height: 10,),
+                                      
+                                                          Row(
+                                                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                                                  children: [
+                                                                    Container(
+                                                                     
+                                      height: 50,
+                                                                     
+                                                                      
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(5.0),
+                                        child: DropdownMenu(
+                                           width: MediaQuery.of(context).size.width*0.4,
+                                         
+                                          hintText: enquireStatusDropdown.enquiryStatus,
+                                          dropdownMenuEntries: (getAllDropDownData.enquiryStatus??[]).map(( item) {
+                                            return DropdownMenuEntry(
+                                              value: item.enquiryStatus,
+                                              label: item.enquiryStatus??"",
+                                            );
+                                          }).toList(),
+                                         onSelected:(item){
+                                                                  (getAllDropDownData.enquiryStatus??[]).forEach((element) {
+                                              (element.enquiryStatus==item)?setState(() {
+                                                enquireStatusDropdown=element;
+                                              }):null;
+                                         });}
+                                        ),
+                                      ),
+                                                                      ),
+                                      
+                                       Container(
+                                      height: 50,
+                                                                      
+                                      width: MediaQuery.of(context).size.width*0.4,
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(5.0),
+                                        child: DropdownMenu(
+                                      width: MediaQuery.of(context).size.width*0.36,
+                                          hintText: leadLevelDropdown.leadLevel,
+                                          dropdownMenuEntries:(getAllDropDownData.leadLevel??[]).map((item) {
+                                            return DropdownMenuEntry(
+                                              value: item.leadLevel,
+                                              label:item.leadLevel??"",);
+                                            
+                                          }).toList(),
+                                       onSelected:(item){
+                                                                  (getAllDropDownData.leadLevel??[]).forEach((element) {
+                                              (element.leadLevel==item)?setState(() {
+                                                leadLevelDropdown=element;
+                                              }):null;
+                                         });}
+                                        ),
+                                      ),
+                                                                      ),
+                                                                 
+                                                                  ],
+                                                                ),
+                                      
+                                                                 SizedBox(height: 20,),
+                                                          Row(
+                                                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                                                  children: [
+                                                                    Container(
+                                                                     
+                                      height: 50,
+                                      width: MediaQuery.of(context).size.width*0.4,
+                                      
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(5.0),
+                                        child: DropdownMenu(
+                                        width: MediaQuery.of(context).size.width*0.4,
+                                          hintText: applicantDropdown.applicantType,
+                                          dropdownMenuEntries: (getAllDropDownData.applicantType??[]).map(( item) {
+                                            return DropdownMenuEntry(
+                                              value: item.applicantType,
+                                              label: item.applicantType??""
+                                            );
+                                          }).toList(),
+                                         onSelected:(item){
+                                                                  (getAllDropDownData.applicantType??[]).forEach((element) {
+                                              (element.applicantType==item)?setState(() {
+                                                applicantDropdown=element;
+                                              }):null;
+                                         });}
+                                        ),
+                                      ),
+                                                                      ),
+                                      
+                                       Container(
+                                      height: 50,
+                                                                       
+                                      
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(5.0),
+                                        child: DropdownMenu(
+                                       width: MediaQuery.of(context).size.width*0.4,
+                                          hintText:"${assingedTo.firstName} ${assingedTo.lastName}" ,
+                                          dropdownMenuEntries:(getAllDropDownData.assingedTo??[]).map((item) {
+                                            return DropdownMenuEntry(
+                                              value: "${item.firstName} ${item.lastName}",
+                                              label:"${item.firstName} ${item.lastName}",
+                                            );
+                                          }).toList(),
+                                       onSelected:(item){
+                                                                 ( getAllDropDownData.assingedTo??[]).forEach((element) {
+                                              ("${element.firstName} ${element.lastName}"==item)?setState(() {
+                                                assingedTo=element;
+                                              }):null;
+                                         });}
+                                        ),
+                                      ),
+                                                                      ),
+                                                                 
+                                                                  ],
+                                                                ),
+                                         SizedBox(height: 30,),
+                                                                  Row(
+                                                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                                            children: [
+                                                              Container(
+                                                                height: 60,
+                                                                width: MediaQuery.of(context).size.width * 0.4,
+                                                                child: TextField(
+                                                                  controller: enquireDate,
+                                                                  readOnly: true,
+                                                                  decoration: InputDecoration(
+                                                                    suffixIcon: Padding(padding: EdgeInsets.all(5),child: GestureDetector(
+                                                                      onTap: ()async{
+                                                                       DateTime? dateTime=await showDatePicker(context: context, firstDate: DateTime(1900), lastDate: DateTime(2050));
+                                                                       if(dateTime!=null){
+                                                                       setState(() {
+                                       enquireDate.text= "${dateTime.year}-${dateTime.month}-${dateTime.day}";
+                                                                       });
+                                                                       }
+                                                                      },
+                                                                      child: Icon(Icons.calendar_month_outlined)),),
+                                                                    labelText: "Enquiry date",
+                                                                    contentPadding: EdgeInsets.symmetric(horizontal: 5),
+                                                                    border: OutlineInputBorder(),
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                              Container(
+                                                                height: 60,
+                                                                width: MediaQuery.of(context).size.width * 0.4,
+                                                                child: TextField(
+                                                                  controller: enquireClousreDate,
+                                                                  readOnly: true,
+                                                                  decoration: InputDecoration(
+                                                                    suffixIcon: Padding(padding: EdgeInsets.all(5),child: GestureDetector(
+                                                                      onTap: ()async{
+                                                                       DateTime? dateTime=await showDatePicker(context: context, firstDate: DateTime(1900), lastDate: DateTime(2050));
+                                                                       if(dateTime!=null){
+                                                                     setState(() {
+                                       enquireClousreDate.text= "${dateTime.year}-${dateTime.month}-${dateTime.day}";
+                                                                     });
+                                                                       }
+                                                                      },
+                                                                      child: Icon(Icons.calendar_month_outlined)),),
+                                                                    labelText: "Enquiry Clouser",
+                                                                    contentPadding: EdgeInsets.symmetric(horizontal: 5),
+                                                                    border: OutlineInputBorder(),
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                      
+                                                                    Padding(
+                                                            padding: const EdgeInsets.symmetric(horizontal: 15),
+                                                            child: Text("Enquire Details", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                                                          ),
+                                                          Padding(
+                                                            padding: const EdgeInsets.symmetric(horizontal: 15),
+                                                            child: TextField(
+                                                          
+                                                              maxLines: 2,
+                                                              controller:enquireDetails ,
+                                                              decoration: InputDecoration(
+                                                                border: OutlineInputBorder(
+                                                                  borderSide: BorderSide(color: Colors.grey.shade300)
+                                                                )
+                                                              )
+                                                            ),
+                                                          ),
+                                      
+                                                          SizedBox(height: 10,),
+                                                                  Row(
+                                                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                                            children: [
+                                                              Container(
+                                                                height: 60,
+                                                                width: MediaQuery.of(context).size.width*0.83 ,
+                                                                child: TextField(
+                                                                  controller: nextAppointmentDate,
+                                                                  readOnly: true,
+                                                                  decoration: InputDecoration(
+                                                                    suffixIcon: Padding(padding: EdgeInsets.all(5),child: GestureDetector(
+                                                                      onTap: ()async{
+                                                                       DateTime? dateTime=await showDatePicker(context: context, firstDate: DateTime(1900), lastDate: DateTime(2050));
+                                                                       if(dateTime!=null){
+                                                                       setState(() {
+                                       nextAppointmentDate.text= "${dateTime.year}-${dateTime.month}-${dateTime.day}";
+                                                                       });
+                                                                       }
+                                                                      },
+                                                                      child: Icon(Icons.calendar_month_outlined)),),
+                                                                    labelText: "Next Appointment",
+                                                                    contentPadding: EdgeInsets.symmetric(horizontal: 5),
+                                                                    border: OutlineInputBorder(),
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                          
+                                                            ],
+                                                          ),
+                                                                    Padding(
+                                                            padding: const EdgeInsets.symmetric(horizontal: 15),
+                                                            child: Text("Notes", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                                                          ),
+                                                          Padding(
+                                                            padding: const EdgeInsets.symmetric(horizontal: 15),
+                                                            child: TextField(
+                                                          
+                                                              maxLines: 2,
+                                                              controller:notes ,
+                                                              decoration: InputDecoration(
+                                                                border: OutlineInputBorder(
+                                                                  borderSide: BorderSide(color: Colors.grey.shade300)
+                                                                )
+                                                              )
+                                                            ),
+                                                          ),
+                                      SizedBox(height: 10,),
+                                       GestureDetector(
+                                                          onTap: (){_validateForm();},
+                                                          child: Container(height: 50,width: MediaQuery.of(context).size.width,margin: EdgeInsets.symmetric(horizontal: 20),decoration: BoxDecoration(color: Colors.greenAccent.shade700,borderRadius: BorderRadius.circular(11)),child: 
+                                                          
+                                                       Center(child: Text("Add Enquiry",style: TextStyle(fontSize: 20,color: Colors.white,fontWeight: FontWeight.w500),))
+                                                            
+                                                          ,),
+                                                        ),
+                                                        SizedBox(height: 70,)
+                                      
+                                      
+                                        ],
+                                      ),
+                                    ),
+                                  ),
                         
-                        ],
-                      ),
-                    ),
-                  ),
-
-
- SingleChildScrollView(
-                    child: Padding(
-                      padding: const EdgeInsets.all(15.0),
-                      child: Column(
-                        children: [
-                      
-                                      SizedBox(height: 40,),
-                         CatdTitle(title: "Internal Information",),
-                         
-                          SizedBox(height: 25,),
-                      
-                           Padding(
-                                                  padding: EdgeInsets.fromLTRB(10, 2, 10, 0),
-                                                  child: TextField(
-                                                    
-                                                    readOnly: true,
-                                                    controller: enquireDate,
-                                                    decoration: InputDecoration(
-                                                      
-                                                      label: Text(" Enquiry Date"),
-                                                     
-                                                      isDense: true,
-                                                      border: OutlineInputBorder(
-                                                        borderSide: BorderSide(color: Colors.black),
-                                                        borderRadius: BorderRadius.circular(15)),
-                                                      suffixIcon: GestureDetector(
-                                                        onTap: ()async{
-                          DateTime? date= await showDatePicker(context: context, firstDate: DateTime(2000), lastDate: DateTime(2099));
-                                                         print('${date!.day}/${date!.month}/${date!.year}');
-                                                         setState(() {
-                                                            enquireDate.text='${date!.year}/${date!.month}/${date!.day}';
-                                                         });                                            },
-                                                        child: Icon(Icons.date_range_outlined))
-                                                    ),
-                                                  ),
-                                                ),
-                                                  SizedBox(height: 20,),
-                           Padding(
-                                                  padding: EdgeInsets.fromLTRB(10, 2, 10, 0),
-                                                  child: TextField(
-                                                    
-                                                    readOnly: true,
-                                                    controller: enquireClousreDate,
-                                                    decoration: InputDecoration(
-                                                      
-                                                      label: Text(" Enquiry Clouser Date"),
-                                                     
-                                                      isDense: true,
-                                                      border: OutlineInputBorder(
-                                                        borderSide: BorderSide(color: Colors.black),
-                                                        borderRadius: BorderRadius.circular(15)),
-                                                      suffixIcon: GestureDetector(
-                                                        onTap: ()async{
-                          DateTime? date= await showDatePicker(context: context, firstDate: DateTime(2000), lastDate: DateTime(2099));
-                                                         print('${date!.day}/${date!.month}/${date!.year}');
-                                                         setState(() {
-                                                            enquireClousreDate.text='${date!.year}/${date!.month}/${date!.day}';
-                                                         });                                            },
-                                                        child: Icon(Icons.date_range_outlined))
-                                                    ),
-                                                  ),
-                                                ),
-                                                  SizedBox(height: 20,),
-                           Padding(
-                                                  padding: EdgeInsets.fromLTRB(10, 2, 10, 0),
-                                                  child: TextField(
-                                                    
-                                                    readOnly: true,
-                                                    controller: nextAppointmentDate,
-                                                    decoration: InputDecoration(
-                                                      
-                                                      label: Text(" Next Appointment Date"),
-                                                     
-                                                      isDense: true,
-                                                      border: OutlineInputBorder(
-                                                        borderSide: BorderSide(color: Colors.black),
-                                                        borderRadius: BorderRadius.circular(15)),
-                                                      suffixIcon: GestureDetector(
-                                                        onTap: ()async{
-                          DateTime? date= await showDatePicker(context: context, firstDate: DateTime(2000), lastDate: DateTime(2099));
-                                                         print('${date!.day}/${date!.month}/${date!.year}');
-                                                         setState(() {
-                                                            nextAppointmentDate.text='${date!.year}/${date!.month}/${date!.day}';
-                                                         });                                            },
-                                                        child: Icon(Icons.date_range_outlined))
-                                                    ),
-                                                  ),
-                                                ),
-                                                  SizedBox(height: 20,),
-                                                   Padding(
-                                                      padding: EdgeInsets.fromLTRB(10, 2, 10, 0),
-                                                     child: TextFormField(
-                                                                         
-                                                                   
-                                                                         decoration: InputDecoration(
-                                                                           label: Text("Notes"),
-                                                                           hintText: "Notes",
-                                                                           border: OutlineInputBorder(
-                                                                             borderRadius: BorderRadius.circular(8)
-                                                                           )
-                                                                         ),
-                                                                         controller: notes,
-                                                                      minLines: 5, // any number you need (It works as the rows for the textarea)
-                                                                      keyboardType: TextInputType.multiline,
-                                                                      maxLines: null,
-                                                                   ),
-                                                   ),
-                                            SizedBox(height: 20,),
-                      
-                        ],
-                      ),
-                    ),
- ),
-        ],
+                    
+                      ],
+                  
+                ),
       )
-        
-      
     );
+
+
+             
+
+
+
+
+     
   
 
 

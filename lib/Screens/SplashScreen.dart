@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:bms/ApiCalls/apiCalls.dart';
+import 'package:bms/Screens/Enquire.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/widgets.dart';
+import 'package:get/get.dart';
 import 'package:lottie/lottie.dart';
 import 'package:bms/Screens/LanderPage.dart';
 import 'package:bms/main.dart';
@@ -37,15 +39,17 @@ final sharedpref= await SharedPreferences.getInstance();
 String email=sharedpref.getString("user_email")??"";
 
 if(!email.isEmpty){
-//  await ApiCalls.getDataofCards(1.toString());
-await ApiCalls.getDataofCards(2.toString());
 
+if(sharedpref.getInt("role_id")==2){
+  print("...........................");
+  print(sharedpref.getInt("role_id"));
+  print("...........................");
+  Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>MyEnquire()));
+}
+ else {await ApiCalls.getDataofCards(2.toString());
 await ApiCalls.getStatus(sharedpref.getInt('account_id').toString());
 await ApiCalls.getDataofTimeShaeet(sharedpref.getInt('account_id')??0, sharedpref.getInt('user_id')??0);
-
-
-
-Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>  LanderPage()));
+Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>  LanderPage()));}
 
 }
 else{

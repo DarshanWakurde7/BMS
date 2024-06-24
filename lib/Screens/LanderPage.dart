@@ -184,7 +184,7 @@ on PlatformException{
 
 final pref=await SharedPreferences.getInstance();
 
-
+await ApiCalls.getStatus(pref.getInt('account_id').toString());
 
 setState(() {
 profileUrl=pref.getString('profile_path')??"";
@@ -392,7 +392,7 @@ SizedBox(height: MediaQuery.of(context).size.width*0.1,),
                     },
                   ),
                   ListTile(
-                    title:const Text("Enquires"),
+                    title:const Text("Enquiries"),
                     leading: const Icon(Icons.question_answer_outlined),
                     onTap: (){
                       Navigator.pop(context);

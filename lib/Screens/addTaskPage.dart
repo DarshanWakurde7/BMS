@@ -342,7 +342,7 @@ Text("Focus",style: TextStyle(fontSize: 13,fontWeight: FontWeight.w300),),
                             placeholder: "Enter Task Here...",
                                 showCursor: true,
                             controller: editingtext,
-                            readOnly: false,
+                           
                             sharedConfigurations: const QuillSharedConfigurations(
                               locale: Locale('de'),
                             ),
@@ -425,6 +425,9 @@ Container(
                               priority=item.toString();
                             });
                             print(item);
+
+
+                            
                           } ),
                         )),
 

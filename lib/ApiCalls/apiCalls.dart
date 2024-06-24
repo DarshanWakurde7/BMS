@@ -635,8 +635,9 @@ Uri url=Uri.parse("${baseurl}enquiry_dropdown/${pref.getInt('account_id')??1}");
 
 final response=await http.get(url);
 
-
-print(response.body);
+print("///////");
+print(jsonDecode(response.body));
+print("///////");
 
 
 return GetAllDropdownEnquire.fromJson(jsonDecode(response.body));
