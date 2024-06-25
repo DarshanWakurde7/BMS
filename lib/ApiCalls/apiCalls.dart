@@ -10,6 +10,7 @@ import 'package:bms/pojos/models/getAllDataofEnquireCard.dart';
 import 'package:bms/pojos/models/snoozedPojo.dart';
 import 'package:bms/widgets/enquireCommentCard.dart';
 import 'package:flutter/material.dart';
+import 'package:multi_dropdown/models/value_item.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -332,8 +333,8 @@ class ApiCalls {
       String id,
       List<int> enqids,
       List<int> assigned,
-      List enqsource,
-      List enqType,
+      List<ValueItem> enqsource,
+      List<ValueItem> enqType,
       String createdDatefrom,
       String createdDateto,
       String updatedfromdate,
@@ -345,12 +346,16 @@ class ApiCalls {
     DateTime dateTime = DateTime.now();
     String date = "${dateTime.month}/${dateTime.day}/${dateTime.year}";
 
+    // Extract the value properties from the ValueItem objects
+    List<int> enqTypeIds = enqType.map((e) => e.value as int).toList();
+    List<int> enqSourceIds = enqsource.map((e) => e.value as int).toList();
+
     Map<String, dynamic> requestBody = {
       "account_id": id,
       "enquiry_status_id": enqids.isEmpty ? null : enqids,
       "assigned_to": assigned.isEmpty ? null : assigned,
-      "enquiry_sources": enqsource.isEmpty ? null : enqsource,
-      "enquiry_type": enqType.isEmpty ? null : enqType,
+      "enquiry_sources": enqSourceIds.isEmpty ? null : enqSourceIds,
+      "enquiry_type": enqTypeIds.isEmpty ? null : enqTypeIds,
       "created_from_date":
           createdDatefrom.isEmpty ? "09/24/2022" : createdDatefrom,
       "created_to_date": createdDateto.isEmpty ? date : createdDateto,
@@ -372,7 +377,7 @@ class ApiCalls {
         body: jsonBody,
       );
 
-      print("Request Body: $jsonBody");
+      print("json Body: $jsonBody");
       print("Response Status: ${response.statusCode}");
       print("Response Body: ${response.body}");
 

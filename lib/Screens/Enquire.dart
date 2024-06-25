@@ -55,8 +55,8 @@ class _MyEnquireState extends State<MyEnquire> {
   void getdata(
       List<int> enqids,
       List<int> assigned,
-      List Enqsource,
-      List EnqType,
+      List<ValueItem> Enqsource,
+      List<ValueItem> EnqType,
       String createdDatefrom,
       String createdDateto,
       String updatedfromdate,
@@ -86,6 +86,7 @@ class _MyEnquireState extends State<MyEnquire> {
   }
 
   GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
   @override
   Widget build(BuildContext context) {
     List<String> lsitdata = ["50", "100", "GetAll"];
@@ -173,17 +174,18 @@ class _MyEnquireState extends State<MyEnquire> {
                 Padding(
                   padding: EdgeInsets.fromLTRB(10, 2, 10, 2),
                   child: MultiSelectDropDown(
-                      padding: EdgeInsets.all(5),
-                      onOptionSelected: (value) {
-                        setState(() {
-                          enqType = value;
-                        });
-                      },
-                      options: (getAllDropDownData.enquiryType ?? [])
-                          .map((e) => ValueItem(
-                              label: (e.enquiryType ?? ""),
-                              value: e.enquiryTypeId))
-                          .toList()),
+                    padding: EdgeInsets.all(5),
+                    onOptionSelected: (value) {
+                      setState(() {
+                        enqType = value;
+                      });
+                    },
+                    options: (getAllDropDownData.enquiryType ?? [])
+                        .map((e) => ValueItem(
+                            label: (e.enquiryType ?? ""),
+                            value: e.enquiryTypeId))
+                        .toList(),
+                  ),
                 ),
                 Text(
                   "   Enquiry Source ",
@@ -415,8 +417,8 @@ class _MyEnquireState extends State<MyEnquire> {
                         getdata(
                             EnqSatus.map((id) => id.value ?? 0).toList(),
                             assignedtp.map((id) => id.value ?? 0).toList(),
-                            enqSource.map((id) => id.value).toList(),
-                            enqType.map((id) => id.toString()).toList(),
+                            enqSource.map((item) => item).toList(),
+                            enqType.map((item) => item).toList(),
                             (fromdate.text.isEmpty) ? '' : fromdate.text,
                             (todate.text.isEmpty) ? '' : todate.text,
                             (updatedate.text.isEmpty) ? '' : updatedate.text,

@@ -1,6 +1,7 @@
 import 'package:bms/ApiCalls/apiCalls.dart';
 import 'package:bms/pojos/models/Enquirepojo.dart';
 import 'package:get/get.dart';
+import 'package:multi_dropdown/models/value_item.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class EnquireCardsController extends GetxController {
@@ -9,8 +10,8 @@ class EnquireCardsController extends GetxController {
   Future<List<EnquiresPojo>> getEnquireCards(
       List<int> enqids,
       List<int> assigned,
-      List Enqsource,
-      List EnqType,
+      List<ValueItem> Enqsource,
+      List<ValueItem> EnqType,
       String createdDatefrom,
       String createdDateto,
       String updatedfromdate,
