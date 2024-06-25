@@ -367,20 +367,10 @@ class LanderPageState extends State<LanderPage>
       if (!mounted) return;
 
       if (data['success']) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(
-              pref.getInt('punch_Status') == 1 ? "Have a Great Day" : "Bye!!"),
-          backgroundColor: pref.getInt('punch_Status') == 1
-              ? Colors.greenAccent
-              : Colors.blueAccent,
-        ));
-        pref.setInt('punch_Status', pref.getInt('punch_Status') == 1 ? 0 : 1);
+        pref.setInt('punch_Status', pref.getInt('punch_Status') == 0 ? 1 : 0);
       }
     } on PlatformException {
-      // ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      //   content: Text("Sorry, failed to scan. Try again."),
-      //   backgroundColor: Colors.redAccent,
-      // ));
+      // Handle platform exceptions
     }
   }
 
