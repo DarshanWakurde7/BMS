@@ -53,7 +53,7 @@ class _MyEnquireState extends State<MyEnquire> {
   }
 
   void getdata(
-      List enqids,
+      List<int> enqids,
       List<int> assigned,
       List Enqsource,
       List EnqType,
@@ -196,7 +196,7 @@ class _MyEnquireState extends State<MyEnquire> {
                       padding: EdgeInsets.all(5),
                       onOptionSelected: (value) {
                         setState(() {
-                          EnqSatus = value;
+                          enqSource = value;
                         });
                       },
                       options: (getAllDropDownData.enquirySources ?? [])
@@ -413,10 +413,10 @@ class _MyEnquireState extends State<MyEnquire> {
                       onPressed: () async {
                         print(assignedtp.map((id) => id.value).toList());
                         getdata(
-                            EnqSatus.map((id) => id.value).toList(),
+                            EnqSatus.map((id) => id.value ?? 0).toList(),
                             assignedtp.map((id) => id.value ?? 0).toList(),
+                            enqSource.map((id) => id.value).toList(),
                             enqType.map((id) => id.toString()).toList(),
-                            EnqSatus.map((id) => id.value).toList(),
                             (fromdate.text.isEmpty) ? '' : fromdate.text,
                             (todate.text.isEmpty) ? '' : todate.text,
                             (updatedate.text.isEmpty) ? '' : updatedate.text,

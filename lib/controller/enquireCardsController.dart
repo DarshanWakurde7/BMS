@@ -7,7 +7,7 @@ class EnquireCardsController extends GetxController {
   List<EnquiresPojo> enquiredata = <EnquiresPojo>[].obs;
   var isLoading = true.obs;
   Future<List<EnquiresPojo>> getEnquireCards(
-      List enqids,
+      List<int> enqids,
       List<int> assigned,
       List Enqsource,
       List EnqType,

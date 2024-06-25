@@ -4,6 +4,7 @@ import 'package:bms/Screens/Activepage.dart';
 import 'package:bms/Screens/Enquire.dart';
 import 'package:bms/Screens/NotActive.dart';
 import 'package:bms/Screens/Notification.dart';
+import 'package:bms/Screens/QrCode.dart';
 import 'package:bms/Screens/Snooze.dart';
 import 'package:bms/ApiCalls/apiCalls.dart';
 import 'package:bms/Screens/clear.dart';
@@ -400,7 +401,7 @@ class LanderPageState extends State<LanderPage>
                   color: Colors.white,
                 ),
                 width: MediaQuery.of(context).size.width * 0.4,
-                height: MediaQuery.of(context).size.height * 0.3,
+                height: MediaQuery.of(context).size.height * 0.4,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -432,7 +433,6 @@ class LanderPageState extends State<LanderPage>
 
                           bool isNewDay = true;
                           if (time != null && time.contains(':')) {
-                            // Handle the time format (HH:mm:ss)
                             try {
                               TimeOfDay parsedTime = TimeOfDay(
                                 hour: int.parse(time.split(':')[0]),
@@ -442,7 +442,6 @@ class LanderPageState extends State<LanderPage>
                               isNewDay = now.hour != parsedTime.hour ||
                                   now.minute != parsedTime.minute;
                             } catch (e) {
-                              // Handle invalid time format
                               print("Invalid time format: $e");
                             }
                           }
@@ -499,6 +498,34 @@ class LanderPageState extends State<LanderPage>
                                   backgroundColor: (status == 0 || isNewDay)
                                       ? Color.fromARGB(255, 76, 175, 172)
                                       : Color.fromARGB(255, 230, 102, 102),
+                                ),
+                              ),
+                              SizedBox(height: 20),
+                              ElevatedButton(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => QRViewExample(),
+                                    ),
+                                  );
+                                },
+                                child: Text(
+                                  "Scan QR Code",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                  ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                    vertical: 10,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  backgroundColor: Colors.blueAccent,
                                 ),
                               ),
                             ],

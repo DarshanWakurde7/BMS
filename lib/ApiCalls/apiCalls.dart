@@ -330,40 +330,37 @@ class ApiCalls {
 
   static Future<List<EnquiresPojo>> getEnquireCard(
       String id,
-      List enqids,
+      List<int> enqids,
       List<int> assigned,
-      List Enqsource,
-      List EnqType,
+      List enqsource,
+      List enqType,
       String createdDatefrom,
       String createdDateto,
       String updatedfromdate,
       String updatedtodate,
       String enqfromdate,
-      String Enqtodate,
-      String EnqCount) async {
+      String enqtodate,
+      String enqCount) async {
     List<EnquiresPojo> enquireData = [];
-// var pref=await SharedPreferences.getInstance();
-
     DateTime dateTime = DateTime.now();
     String date = "${dateTime.month}/${dateTime.day}/${dateTime.year}";
-    print(date);
+
     Map<String, dynamic> requestBody = {
       "account_id": id,
-      "enquiry_status_id": (enqids.isEmpty) ? null : enqids,
-      "assigned_to": (assigned.isEmpty) ? null : assigned,
-      "enquiry_sources": (Enqsource.isEmpty) ? null : Enqsource,
-      "enquiry_type": (EnqType.isEmpty) ? null : EnqType,
+      "enquiry_status_id": enqids.isEmpty ? null : enqids,
+      "assigned_to": assigned.isEmpty ? null : assigned,
+      "enquiry_sources": enqsource.isEmpty ? null : enqsource,
+      "enquiry_type": enqType.isEmpty ? null : enqType,
       "created_from_date":
-          (createdDatefrom.isEmpty) ? "09/24/2022" : createdDatefrom,
-      "created_to_date": (createdDateto.isEmpty) ? date : createdDateto,
-      "updated_from_date": (updatedfromdate.isEmpty) ? null : updatedfromdate,
-      "updated_to_date": (updatedtodate.isEmpty) ? null : updatedtodate,
-      "enquiry_from_date": (enqfromdate.isEmpty) ? null : enqfromdate,
-      "enquiry_to_date": (Enqtodate.isEmpty) ? null : Enqtodate,
+          createdDatefrom.isEmpty ? "09/24/2022" : createdDatefrom,
+      "created_to_date": createdDateto.isEmpty ? date : createdDateto,
+      "updated_from_date": updatedfromdate.isEmpty ? null : updatedfromdate,
+      "updated_to_date": updatedtodate.isEmpty ? null : updatedtodate,
+      "enquiry_from_date": enqfromdate.isEmpty ? null : enqfromdate,
+      "enquiry_to_date": enqtodate.isEmpty ? null : enqtodate,
       "enq_count": "50"
     };
 
-    // Encode the request body to JSON
     try {
       String jsonBody = jsonEncode(requestBody);
       Uri url = Uri.parse("${baseurl}filtered_enquiries");
@@ -375,11 +372,17 @@ class ApiCalls {
         body: jsonBody,
       );
 
-      print("-----------");
-      print(requestBody);
-      print(response.body);
-      for (Map<String, dynamic> i in jsonDecode(response.body)) {
-        enquireData.add(EnquiresPojo.fromJson(i));
+      print("Request Body: $jsonBody");
+      print("Response Status: ${response.statusCode}");
+      print("Response Body: ${response.body}");
+
+      if (response.statusCode == 200) {
+        List<dynamic> jsonData = jsonDecode(response.body);
+        for (Map<String, dynamic> item in jsonData) {
+          enquireData.add(EnquiresPojo.fromJson(item));
+        }
+      } else {
+        print('Failed to load enquiries');
       }
     } catch (e) {
       print(e);
