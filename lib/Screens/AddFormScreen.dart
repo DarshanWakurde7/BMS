@@ -43,7 +43,7 @@ class __AddEnquireFormState extends State<AddEnquireForm>
   TextEditingController pincode = TextEditingController();
   TextEditingController city = TextEditingController();
 
-  EnquiryType enquiredropdown = EnquiryType(enquiryType: "select Enquiry");
+  EnquiryType enquiredropdown = EnquiryType(enquiryType: "Select Enquiry");
   ApplicantType applicantDropdown =
       ApplicantType(applicantType: "Applicant Type");
   EnquiryStatus enquireStatusDropdown =
@@ -170,7 +170,7 @@ class __AddEnquireFormState extends State<AddEnquireForm>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        backgroundColor: Colors.blueAccent.shade100,
+        backgroundColor: Color.fromARGB(255, 189, 208, 240),
         body: SingleChildScrollView(
           child: Column(
             children: [
@@ -183,7 +183,7 @@ class __AddEnquireFormState extends State<AddEnquireForm>
                     style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.w400,
-                        color: Colors.white),
+                        color: Colors.black),
                   ),
                 ),
               ),
@@ -194,7 +194,7 @@ class __AddEnquireFormState extends State<AddEnquireForm>
                 color: Colors.white,
                 margin: EdgeInsets.symmetric(horizontal: 20),
                 height: MediaQuery.of(context).size.height * 0.88,
-                width: MediaQuery.of(context).size.width,
+                width: MediaQuery.of(context).size.width * 0.99,
                 child: SingleChildScrollView(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -262,7 +262,7 @@ class __AddEnquireFormState extends State<AddEnquireForm>
                             child: TextField(
                               controller: whatsappno,
                               decoration: InputDecoration(
-                                labelText: "Whatsapp No.",
+                                labelText: "WhatsApp No.",
                                 contentPadding:
                                     EdgeInsets.symmetric(horizontal: 5),
                                 border: OutlineInputBorder(),
@@ -299,8 +299,8 @@ class __AddEnquireFormState extends State<AddEnquireForm>
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
                           Container(
-                            height: 60,
-                            width: MediaQuery.of(context).size.width * 0.4,
+                            height: 50,
+                            width: MediaQuery.of(context).size.width * 0.410,
                             child: TextField(
                               controller: state,
                               keyboardType: TextInputType.text,
@@ -313,8 +313,8 @@ class __AddEnquireFormState extends State<AddEnquireForm>
                             ),
                           ),
                           Container(
-                            height: 60,
-                            width: MediaQuery.of(context).size.width * 0.4,
+                            height: 52,
+                            width: MediaQuery.of(context).size.width * 0.42,
                             child: TextField(
                               controller: city,
                               keyboardType: TextInputType.text,
@@ -332,26 +332,28 @@ class __AddEnquireFormState extends State<AddEnquireForm>
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
                           Container(
-                            height: 60,
-                            width: MediaQuery.of(context).size.width * 0.4,
+                            height: 47,
+                            width: MediaQuery.of(context).size.width * 0.410,
                             child: TextField(
                               controller: pincode,
                               keyboardType: TextInputType.number,
                               decoration: InputDecoration(
                                 labelText: "Pin",
                                 contentPadding: EdgeInsets.symmetric(
-                                    horizontal: 5, vertical: 60),
+                                    horizontal: 7, vertical: 60),
                                 border: OutlineInputBorder(),
                               ),
                             ),
                           ),
                           Container(
-                            width: MediaQuery.of(context).size.width * 0.4,
+                            width: MediaQuery.of(context).size.width * 0.45,
                             child: Padding(
                               padding: const EdgeInsets.all(5.0),
-                              child: DropdownMenu(
+                              child: FittedBox(
+                                fit: BoxFit.contain,
+                                child: DropdownMenu(
                                   width:
-                                      MediaQuery.of(context).size.width * 0.4,
+                                      MediaQuery.of(context).size.width * 0.5,
                                   menuHeight: 250,
                                   hintText: enquiredropdown.enquiryType,
                                   dropdownMenuEntries:
@@ -365,13 +367,15 @@ class __AddEnquireFormState extends State<AddEnquireForm>
                                   onSelected: (item) {
                                     (getAllDropDownData.enquiryType ?? [])
                                         .forEach((element) {
-                                      (element.enquiryType == item)
-                                          ? setState(() {
-                                              enquiredropdown = element;
-                                            })
-                                          : null;
+                                      if (element.enquiryType == item) {
+                                        setState(() {
+                                          enquiredropdown = element;
+                                        });
+                                      }
                                     });
-                                  }),
+                                  },
+                                ),
+                              ),
                             ),
                           ),
                         ],

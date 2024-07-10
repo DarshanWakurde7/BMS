@@ -254,93 +254,85 @@ class _MyWidgetState extends State<MyWidget> {
                           size: 26,
                         )),
                     GestureDetector(
-                        onTap: () {
-                          // enquireComment=    enquireComment=await ApiCalls.getEnquireComment((sharedPreferences.getInt("account_id")).toString(),widget.id.toString());
-                          getCommentsData();
+                      onTap: () {
+                        getCommentsData();
 
-                          showBottomSheet(
-                              backgroundColor: Colors.black.withOpacity(0.5),
-                              context: context,
-                              builder: (context) {
-                                return Padding(
-                                  padding: const EdgeInsets.all(5.0),
-                                  child: StatefulBuilder(
-                                      builder: (context, StateSetter setter) {
-                                    return Obx(() {
-                                      if (commentController.isLoading.value) {
-                                        return Container(
-                                          height: double.infinity,
-                                          child: Center(
-                                            child: CircularProgressIndicator(),
-                                          ),
-                                        );
-                                      } else if ((!commentController
-                                              .isLoading.value) &&
-                                          (commentController
-                                              .commentsdata.isEmpty)) {
-                                        return Center(
-                                          child: Card(
-                                            color: Colors.white,
-                                            child: Container(
-                                              decoration: BoxDecoration(
-                                                  color: Colors.white,
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                          11)),
-                                              child: Padding(
-                                                padding:
-                                                    const EdgeInsets.all(8.0),
-                                                child: Text(
-                                                  "Sorry no Comments yet",
-                                                  style: TextStyle(
-                                                      fontSize: 16,
-                                                      fontWeight:
-                                                          FontWeight.w500),
-                                                ),
+                        showBottomSheet(
+                          backgroundColor: Colors.black.withOpacity(0.5),
+                          context: context,
+                          builder: (context) {
+                            return Padding(
+                              padding: const EdgeInsets.all(5.0),
+                              child: StatefulBuilder(
+                                builder: (context, StateSetter setter) {
+                                  return Obx(() {
+                                    if (commentController.isLoading.value) {
+                                      return Container(
+                                        height: double.infinity,
+                                        child: Center(
+                                          child: CircularProgressIndicator(),
+                                        ),
+                                      );
+                                    } else if ((!commentController
+                                            .isLoading.value) &&
+                                        (commentController
+                                            .commentsdata.isEmpty)) {
+                                      return Center(
+                                        child: Card(
+                                          color: Colors.white,
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius:
+                                                  BorderRadius.circular(11),
+                                            ),
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.all(8.0),
+                                              child: Text(
+                                                "No comments available!",
+                                                style: TextStyle(
+                                                    fontSize: 16,
+                                                    fontWeight:
+                                                        FontWeight.w500),
                                               ),
                                             ),
                                           ),
-                                        );
-                                      } else {
-                                        return ListView.builder(
-                                            itemCount: commentController
-                                                .commentsdata.length,
-                                            itemBuilder: (context, index) {
-                                              return EnquireComment(
-                                                name: commentController
-                                                        .commentsdata[index]
-                                                        .createdFname ??
-                                                    "",
-                                                date: commentController
-                                                        .commentsdata[index]
-                                                        .updatedAt ??
-                                                    "",
-                                                comment: commentController
-                                                        .commentsdata[0]
-                                                        .message ??
-                                                    "",
-                                                nextfollupdate:
-                                                    commentController
-                                                            .commentsdata[0]
-                                                            .followUpDate ??
-                                                        "",
-                                                status: "followup",
-                                                profile: commentController
-                                                        .commentsdata[0]
-                                                        .profilePath ??
-                                                    "profilepicture/G1SMGwzAvl1eYTZhsh7YfqVFMD9m0ElikUIIQGGy.webp",
-                                              );
-                                            });
-                                      }
-                                    });
-                                  }),
-                                );
-                              });
-                        },
-                        child: Icon(
-                          Icons.comment,
-                          color: Colors.black,
-                        )),
+                                        ),
+                                      );
+                                    } else {
+                                      return ListView.builder(
+                                        itemCount: commentController
+                                            .commentsdata.length,
+                                        itemBuilder: (context, index) {
+                                          final comment = commentController
+                                              .commentsdata[index];
+                                          return EnquireComment(
+                                            name: comment.createdFname ?? "",
+                                            date: comment.createdAt ?? "",
+                                            comment: comment.message ?? "",
+                                            nextfollupdate:
+                                                comment.followUpDate ?? "",
+                                            status: comment.commentStatus ??
+                                                "No status",
+                                            profile: comment.profilePath ??
+                                                "profilepicture/G1SMGwzAvl1eYTZhsh7YfqVFMD9m0ElikUIIQGGy.webp",
+                                          );
+                                        },
+                                      );
+                                    }
+                                  });
+                                },
+                              ),
+                            );
+                          },
+                        );
+                      },
+                      child: Icon(
+                        Icons.comment,
+                        color: Colors.black,
+                      ),
+                    ),
                   ],
                 )
               ],

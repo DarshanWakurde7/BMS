@@ -931,10 +931,9 @@ class _myCards1State extends State<myCards1> {
                                 ),
                               ),
                               controller: comment,
-                              minLines:
-                                  5, // any number you need (It works as the rows for the textarea)
-                              keyboardType: TextInputType.multiline,
+                              minLines: 5, // any number you need
                               maxLines: null,
+                              keyboardType: TextInputType.multiline,
                             ),
                           ),
                         ],
@@ -949,7 +948,7 @@ class _myCards1State extends State<myCards1> {
                         height: MediaQuery.of(context).size.height * 0.04,
                         child: ElevatedButton(
                           onPressed: () async {
-                            // Print statements for debugging
+                            // Add timesheet logic
                             print(todays);
                             await ApiCalls.addTimeSheetOfProject(
                               dataOfCards[widget.index].projectTaskId ?? 0,
@@ -968,6 +967,13 @@ class _myCards1State extends State<myCards1> {
                               comment.text.toString(),
                               mynew!.format(context),
                               mynew1!.format(context),
+                            );
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Timesheet added successfully'),
+                                duration: Duration(seconds: 2),
+                              ),
                             );
                           },
                           child: const Row(

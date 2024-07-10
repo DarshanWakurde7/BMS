@@ -13,6 +13,7 @@ class EnquiresCommentss {
   String? createdFname;
   String? createdLname;
   String? profilePath;
+  String? commentStatus;
 
   EnquiresCommentss(
       {this.commentId,
@@ -28,7 +29,8 @@ class EnquiresCommentss {
       this.updatedAt,
       this.createdFname,
       this.createdLname,
-      this.profilePath});
+      this.profilePath,
+      this.commentStatus});
 
   EnquiresCommentss.fromJson(Map<String, dynamic> json) {
     commentId = json['comment_id'];
@@ -45,6 +47,7 @@ class EnquiresCommentss {
     createdFname = json['created_fname'];
     createdLname = json['created_lname'];
     profilePath = json['profile_path'];
+    commentStatus = json['comment_status'];
   }
 
   Map<String, dynamic> toJson() {

@@ -1,79 +1,403 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:camera/camera.dart';
-import 'package:path/path.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:lottie/lottie.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 
-class PhotoAttendanceScreen extends StatefulWidget {
+class CheckInPage extends StatefulWidget {
   @override
-  _PhotoAttendanceScreenState createState() => _PhotoAttendanceScreenState();
+  _CheckInPageState createState() => _CheckInPageState();
 }
 
-class _PhotoAttendanceScreenState extends State<PhotoAttendanceScreen> {
-  late CameraController _controller;
-  late Future<void> _initializeControllerFuture;
+class _CheckInPageState extends State<CheckInPage>
+    with SingleTickerProviderStateMixin {
+  File? _imageFile;
+  bool isCheckedIn = false;
+  bool isVerifying = false;
+  bool showBlur = false;
+  int? _employeeId;
+  late AnimationController _controller;
+  late Animation<double> _animation;
+  DateTime? checkInTime;
+  DateTime? checkOutTime;
+  Stopwatch _stopwatch = Stopwatch();
+  Timer? _timer;
+
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
     super.initState();
-    _controller = CameraController(
-      // Use the first available camera
-      CameraDescription(
-        name: '0',
-        lensDirection: CameraLensDirection.front,
-        sensorOrientation: 0, // Sample value, adjust as needed
-      ),
-      ResolutionPreset.medium,
-    );
+    _controller = AnimationController(
+      duration: const Duration(seconds: 2),
+      vsync: this,
+    )..repeat(reverse: true);
+    _animation = Tween(begin: 0.0, end: 1.0).animate(_controller);
 
-    _initializeControllerFuture = _controller.initialize();
+    _initializeUser();
+    _loadState();
   }
 
   @override
   void dispose() {
-    // Dispose of the controller when the widget is disposed.
     _controller.dispose();
+    _timer?.cancel();
     super.dispose();
+  }
+
+  Future<void> _initializeUser() async {
+    final employeeId = await _getEmployeeId();
+    setState(() {
+      _employeeId = employeeId;
+    });
+  }
+
+  Future<int?> _getEmployeeId() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final employeeId = prefs.getInt('employee_id');
+      return employeeId;
+    } catch (e) {
+      print('Error retrieving employee ID: $e');
+      return null;
+    }
+  }
+
+  Future<void> _loadState() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      isCheckedIn = prefs.getBool('isCheckedIn') ?? false;
+
+      try {
+        final checkInTimeString = prefs.getString('checkInTime');
+        checkInTime = checkInTimeString != null && checkInTimeString.isNotEmpty
+            ? DateTime.parse(checkInTimeString)
+            : null;
+      } catch (e) {
+        print('Error parsing check-in time: $e');
+        checkInTime = null;
+      }
+
+      try {
+        final checkOutTimeString = prefs.getString('checkOutTime');
+        checkOutTime =
+            checkOutTimeString != null && checkOutTimeString.isNotEmpty
+                ? DateTime.parse(checkOutTimeString)
+                : null;
+      } catch (e) {
+        print('Error parsing check-out time: $e');
+        checkOutTime = null;
+      }
+
+      if (isCheckedIn) {
+        _stopwatch.start();
+        _timer = Timer.periodic(Duration(seconds: 1), (timer) {
+          if (!mounted) return;
+          setState(() {});
+        });
+      }
+    });
+  }
+
+  Future<void> _saveState() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isCheckedIn', isCheckedIn);
+    await prefs.setString('checkInTime', checkInTime?.toIso8601String() ?? '');
+    await prefs.setString(
+        'checkOutTime', checkOutTime?.toIso8601String() ?? '');
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    final pickedFile = await _picker.pickImage(source: source);
+
+    setState(() {
+      if (pickedFile != null) {
+        _imageFile = File(pickedFile.path);
+        _verifyFace();
+      } else {
+        print('No image selected.');
+      }
+    });
+  }
+
+  Future<void> _verifyFace() async {
+    if (_imageFile == null || _employeeId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please capture a photo for verification.')),
+      );
+      return;
+    }
+
+    setState(() {
+      isVerifying = true;
+      showBlur = true;
+    });
+
+    final uri = Uri.parse(
+        'http://91.108.111.222:8000/attendance/${isCheckedIn ? 'check_out' : 'check_in'}/');
+    var request = http.MultipartRequest('POST', uri)
+      ..fields['employee_id'] = _employeeId.toString()
+      ..files.add(await http.MultipartFile.fromPath('image', _imageFile!.path));
+
+    try {
+      var response = await request.send().timeout(Duration(seconds: 60));
+
+      // Read and decode the response
+      var streamedResponse = await response.stream.bytesToString();
+      var jsonResponse = json.decode(streamedResponse);
+
+      setState(() {
+        isVerifying = false;
+        showBlur = false;
+      });
+
+      if (response.statusCode == 200) {
+        if (jsonResponse['status'] == 'success') {
+          setState(() {
+            if (isCheckedIn) {
+              checkOutTime = DateTime.parse(jsonResponse['check_out_time']);
+              _stopwatch.stop();
+              _timer?.cancel();
+            } else {
+              isCheckedIn = !isCheckedIn;
+              if (isCheckedIn) {
+                checkInTime = DateTime.parse(jsonResponse['check_in_time']);
+                _startStopwatch();
+                checkOutTime = null;
+              }
+            }
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text(
+                    '${isCheckedIn ? 'Check-in' : 'Check-out'} successful')),
+          );
+          _saveState();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(jsonResponse['message'] ?? 'Unknown error')),
+          );
+        }
+      } else if (response.statusCode == 400) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(jsonResponse['message'] ?? 'Bad request')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Unexpected error: ${response.statusCode}')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
+  }
+
+  void _startStopwatch() {
+    _stopwatch.start();
+    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
+      if (!mounted) return;
+      setState(() {});
+    });
+  }
+
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, "0");
+    String twoDigitHours = twoDigits(duration.inHours);
+    String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
+    String twoDigitSeconds = twoDigits(duration.inSeconds.remainder(60));
+    return "$twoDigitHours:$twoDigitMinutes:$twoDigitSeconds";
+  }
+
+  String _formatDateTime(DateTime? dateTime) {
+    if (dateTime == null) return 'N/A';
+    final istTime = dateTime.toLocal();
+    return '${_formatTime(istTime)} ${istTime.day}/${istTime.month}/${istTime.year} IST';
+  }
+
+  String _formatTime(DateTime dateTime) {
+    String twoDigits(int n) => n.toString().padLeft(2, "0");
+    String hours = twoDigits(dateTime.hour);
+    String minutes = twoDigits(dateTime.minute);
+    String seconds = twoDigits(dateTime.second);
+    return '$hours:$minutes:$seconds';
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Take a Photo'),
+        title: Text('Check In/Out'),
       ),
-      body: FutureBuilder<void>(
-        future: _initializeControllerFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.done) {
-            // If the Future is complete, display the preview.
-            return CameraPreview(_controller);
-          } else {
-            // Otherwise, display a loading indicator.
-            return Center(child: CircularProgressIndicator());
-          }
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        child: Icon(Icons.camera),
-        // Take a picture and save it to the gallery
-        onPressed: () async {
-          try {
-            await _initializeControllerFuture;
-
-            final path = join(
-              (await getTemporaryDirectory()).path,
-              '${DateTime.now()}.png',
-            );
-
-            await _controller.takePicture();
-
-            // Return the path to the previous screen
-            Navigator.pop(context, path);
-          } catch (e) {
-            print('Error taking picture: $e');
-          }
-        },
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: AnimatedSize(
+            duration: Duration(milliseconds: 300),
+            child: Card(
+              elevation: 4.0,
+              child: Container(
+                color: Color.fromARGB(255, 206, 236, 255),
+                padding: const EdgeInsets.all(32.0),
+                constraints: BoxConstraints(
+                  minHeight: _imageFile == null ? 200 : 200,
+                  minWidth: 300,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text('Welcome, ${_employeeId ?? 'User'}!'),
+                    SizedBox(height: 16.0),
+                    Text(isCheckedIn
+                        ? 'You are currently checked in.'
+                        : 'You are currently checked out.'),
+                    if (isCheckedIn) ...[
+                      SizedBox(height: 16.0),
+                      Text(
+                        'Checked in at: ${_formatDateTime(checkInTime)}',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      SizedBox(height: 16.0),
+                      Text(
+                        'Elapsed time: ${_formatDuration(_stopwatch.elapsed)}',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                    if (!isCheckedIn && checkOutTime != null) ...[
+                      SizedBox(height: 16.0),
+                      Text(
+                        'Checked out at: ${_formatDateTime(checkOutTime)}',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      SizedBox(height: 16.0),
+                      Text(
+                        'Total time: ${_formatDuration(_stopwatch.elapsed)}',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 20),
+                      ),
+                    ],
+                    SizedBox(height: 16.0),
+                    _imageFile != null
+                        ? Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Image.file(
+                                _imageFile!,
+                                height: 350,
+                                width: 350,
+                                fit: BoxFit.cover,
+                              ),
+                              if (isVerifying)
+                                Positioned.fill(
+                                  child: Opacity(
+                                    opacity: 0.6,
+                                    child: Container(
+                                      color: Colors.black,
+                                      child: CustomPaint(
+                                        painter: ScanningPainter(
+                                            animation: _animation),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              if (!isVerifying && showBlur)
+                                Positioned.fill(
+                                  child: BackdropFilter(
+                                    filter: ImageFilter.blur(
+                                        sigmaX: 10, sigmaY: 10),
+                                    child: Center(
+                                      child: Container(
+                                        height: 250,
+                                        width: 300,
+                                        child: Lottie.asset(
+                                          isCheckedIn
+                                              ? 'assets/animation/check_in.json'
+                                              : 'assets/animation/Animation - 1706007655831.json',
+                                          repeat: false,
+                                          onLoaded: (composition) {
+                                            Timer(
+                                              composition.duration,
+                                              () {
+                                                if (mounted) {
+                                                  setState(() {
+                                                    showBlur = false;
+                                                  });
+                                                }
+                                              },
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          )
+                        : SizedBox.shrink(),
+                    SizedBox(height: 16.0),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        if (isCheckedIn) {
+                          _pickImage(ImageSource.camera);
+                        } else {
+                          _pickImage(ImageSource.camera);
+                        }
+                      },
+                      icon: Icon(
+                        Icons.camera_alt,
+                        color: Colors.white,
+                      ),
+                      label: Text(isCheckedIn ? 'Check Out' : 'Check In',
+                          style: TextStyle(color: Colors.white, fontSize: 18)),
+                      style: ElevatedButton.styleFrom(
+                        padding: EdgeInsets.symmetric(horizontal: 20.0),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                        backgroundColor: isCheckedIn
+                            ? Color.fromARGB(255, 230, 102, 102)
+                            : Color.fromARGB(255, 76, 175, 172),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
+  }
+}
+
+class ScanningPainter extends CustomPainter {
+  final Animation<double> animation;
+
+  ScanningPainter({required this.animation}) : super(repaint: animation);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.green
+      ..strokeWidth = 4.0
+      ..style = PaintingStyle.stroke;
+
+    final double scanY = size.height * animation.value;
+
+    canvas.drawLine(
+      Offset(0, scanY),
+      Offset(size.width, scanY),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+    return false;
   }
 }

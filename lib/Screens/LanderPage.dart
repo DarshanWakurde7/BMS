@@ -9,6 +9,7 @@ import 'package:bms/Screens/Snooze.dart';
 import 'package:bms/ApiCalls/apiCalls.dart';
 import 'package:bms/Screens/clear.dart';
 import 'package:bms/Screens/complete.dart';
+import 'package:bms/Screens/face_verification.dart';
 import 'package:bms/Screens/hold.dart';
 import 'package:bms/Screens/review.dart';
 import 'package:bms/main.dart';
@@ -26,6 +27,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_expandable_fab/flutter_expandable_fab.dart';
 import 'package:bms/Screens/LeaveTracker.dart';
 import 'package:bms/Screens/LeaveRequest.dart';
+import 'package:stop_watch_timer/stop_watch_timer.dart';
+import 'package:bms/Screens/PhotoAttendence.dart';
 
 List<String> fieldsNames = [
   'Not Started',
@@ -46,13 +49,24 @@ class LanderPage extends StatefulWidget {
 
 class LanderPageState extends State<LanderPage>
     with SingleTickerProviderStateMixin {
+  final StopWatchTimer _stopWatchTimer = StopWatchTimer(
+    mode: StopWatchMode.countUp,
+    onChange: (value) {
+      final displayTime =
+          StopWatchTimer.getDisplayTime(value, milliSecond: false);
+      print('Display Time: $displayTime');
+    },
+  );
+
   var backColor;
   late bool light;
   bool checkLocation = false;
   String punch_Status = "";
   late String urlAnime;
   String profileUrl = "";
-
+  Stopwatch _stopwatch = Stopwatch();
+  String _elapsedTime = '';
+  bool _isCheckingIn = true;
   Future<Position> _determinePosition() async {
     List<kit.LatLng> poligonlatslongs = [
       kit.LatLng(18.5944166, 73.7917032),
@@ -62,8 +76,11 @@ class LanderPageState extends State<LanderPage>
       kit.LatLng(18.5946136, 73.7935348),
       kit.LatLng(18.5941001, 73.7934851),
       kit.LatLng(18.5939405, 73.7932565),
-      kit.LatLng(15.8992889, 73.835161),
-      kit.LatLng(15.9029442, 73.8398846),
+      // kit.LatLng(18.6801125, 73.8272749),
+      // kit.LatLng(18.6801117, 73.8272666),
+      // kit.LatLng(18.6800993, 73.8272603),
+      // kit.LatLng(18.6800984, 73.8272802),
+      // kit.LatLng(18.6801017, 73.8272581),
     ];
 
     bool serviceEnabled;
@@ -188,11 +205,13 @@ class LanderPageState extends State<LanderPage>
     }
   }
 
+  String? timedata;
   String getTime(http.Response responseAttendence) {
     final data = jsonDecode(responseAttendence.body);
     final List<Map<String, dynamic>> attendanceData =
         List<Map<String, dynamic>>.from(data['data']);
     final latestAttendance = attendanceData.last;
+    timedata = latestAttendance['time'];
     return latestAttendance['time'];
   }
 
@@ -230,6 +249,7 @@ class LanderPageState extends State<LanderPage>
   @override
   void dispose() {
     tabController.dispose();
+    _stopWatchTimer.dispose();
     super.dispose();
   }
 
@@ -331,6 +351,31 @@ class LanderPageState extends State<LanderPage>
       if (responseAttendance.statusCode == 200) {
         var data = jsonDecode(responseAttendance.body);
 
+        if (pref.getString("chekinTime") != null && data['punch_status'] == 0) {
+          // Parse the check-in time
+          String checkinTimeString = pref.getString("chekinTime")!;
+          DateTime checkinTime = DateTime(
+            DateTime.now().year,
+            DateTime.now().month,
+            DateTime.now().day,
+            int.parse(checkinTimeString.split(":")[0]),
+            int.parse(checkinTimeString.split(":")[1]),
+            int.parse(checkinTimeString.split(":")[2]),
+          );
+
+          // Calculate the difference between the current time and the check-in time
+          DateTime currentDate = DateTime.now().subtract(Duration(
+              hours: checkinTime.hour,
+              minutes: checkinTime.minute,
+              seconds: checkinTime.second));
+          _stopWatchTimer.clearPresetTime();
+          // Set the stopwatch timer using the calculated difference
+          _stopWatchTimer.setPresetHoursTime(currentDate.hour);
+          _stopWatchTimer.setPresetMinuteTime(currentDate.minute);
+          _stopWatchTimer.setPresetSecondTime(currentDate.second);
+          _stopWatchTimer.onStartTimer();
+        }
+
         return {
           'punch_status': data['punch_status'] ?? 0,
           'time': getTime(responseAttendance) ?? 0
@@ -361,13 +406,27 @@ class LanderPageState extends State<LanderPage>
       };
 
       final response = await http.post(url, body: payload);
-
       var data = jsonDecode(response.body.toString());
 
       if (!mounted) return;
 
       if (data['success']) {
-        pref.setInt('punch_Status', pref.getInt('punch_Status') == 0 ? 1 : 0);
+        pref.setString("chekinTime",
+            "${DateTime.now().hour}:${DateTime.now().minute}:${DateTime.now().second}");
+        final punchStatus = pref.getInt('punch_Status');
+        if (punchStatus == 0) {
+          _stopWatchTimer.onResetTimer();
+          _stopWatchTimer.onStartTimer();
+        } else {
+          _stopWatchTimer.onStopTimer();
+          final workTime = StopWatchTimer.getDisplayTime(
+            _stopWatchTimer.rawTime.value,
+            milliSecond: false,
+          );
+          print('Total Work Time: $workTime');
+        }
+
+        pref.setInt('punch_Status', punchStatus == 1 ? 0 : 1);
       }
     } on PlatformException {
       // Handle platform exceptions
@@ -391,7 +450,7 @@ class LanderPageState extends State<LanderPage>
                   color: Colors.white,
                 ),
                 width: MediaQuery.of(context).size.width * 0.4,
-                height: MediaQuery.of(context).size.height * 0.4,
+                height: MediaQuery.of(context).size.height * 0.5,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -416,35 +475,57 @@ class LanderPageState extends State<LanderPage>
                         } else {
                           final status = snapshot.data != null
                               ? snapshot.data!['punch_status']
-                              : 0;
+                              : 1;
                           final time = snapshot.data != null
                               ? snapshot.data!['time']
                               : null;
 
-                          bool isNewDay = true;
-                          if (time != null && time.contains(':')) {
-                            try {
-                              TimeOfDay parsedTime = TimeOfDay(
-                                hour: int.parse(time.split(':')[0]),
-                                minute: int.parse(time.split(':')[1]),
-                              );
-                              DateTime now = DateTime.now();
-                              isNewDay = now.hour != parsedTime.hour ||
-                                  now.minute != parsedTime.minute;
-                            } catch (e) {
-                              print("Invalid time format: $e");
-                            }
-                          }
+                          //  bool isNewDay = true;
+                          // if (time != null && time.contains(':')) {
+                          //   try {
+                          //     TimeOfDay parsedTime = TimeOfDay(
+                          //       hour: int.parse(time.split(':')[0]),
+                          //       minute: int.parse(time.split(':')[1]),
+                          //     );
+                          //     DateTime now = DateTime.now();
+                          //     isNewDay = now.hour != parsedTime.hour ||
+                          //         now.minute != parsedTime.minute;
+                          //   } catch (e) {
+                          //     print("Invalid time format: $e");
+                          //   }
+                          // }
 
                           return Column(
                             children: [
                               if (time != null)
                                 Text(
-                                  status != 0
+                                  status == 0
                                       ? " Checked In Time: $time"
                                       : " Checked Out Time: $time",
                                   style: TextStyle(fontSize: 18),
                                 ),
+                              SizedBox(height: 20),
+                              Text(
+                                "Total in hours",
+                                style: TextStyle(
+                                    fontSize: 18, fontWeight: FontWeight.bold),
+                              ),
+                              StreamBuilder<int>(
+                                stream: _stopWatchTimer.rawTime,
+                                initialData: _stopWatchTimer.rawTime.value,
+                                builder: (context, snap) {
+                                  final value = snap.data!;
+                                  final displayTime =
+                                      StopWatchTimer.getDisplayTime(value,
+                                          milliSecond: false);
+                                  return Text(
+                                    displayTime,
+                                    style: TextStyle(
+                                        fontSize: 30,
+                                        fontWeight: FontWeight.bold),
+                                  );
+                                },
+                              ),
                               SizedBox(height: 20),
                               ElevatedButton(
                                 onPressed: () async {
@@ -469,23 +550,16 @@ class LanderPageState extends State<LanderPage>
                                   }
                                 },
                                 child: Text(
-                                  (status == 0 || isNewDay)
-                                      ? "Check In"
-                                      : "Check Out",
+                                  (status == 1) ? "Check In" : "Check Out",
                                   style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                  ),
+                                      color: Colors.white, fontSize: 18),
                                 ),
                                 style: ElevatedButton.styleFrom(
                                   padding: EdgeInsets.symmetric(
-                                    horizontal: 20,
-                                    vertical: 10,
-                                  ),
+                                      horizontal: 35, vertical: 10),
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  backgroundColor: (status == 0 || isNewDay)
+                                      borderRadius: BorderRadius.circular(8)),
+                                  backgroundColor: (status == 1)
                                       ? Color.fromARGB(255, 76, 175, 172)
                                       : Color.fromARGB(255, 230, 102, 102),
                                 ),
@@ -496,26 +570,20 @@ class LanderPageState extends State<LanderPage>
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => QRViewExample(),
-                                    ),
+                                        builder: (context) => QRViewExample()),
                                   );
                                 },
                                 child: Text(
                                   "Scan QR Code",
                                   style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                  ),
+                                      color: Colors.white, fontSize: 18),
                                 ),
                                 style: ElevatedButton.styleFrom(
                                   padding: EdgeInsets.symmetric(
-                                    horizontal: 20,
-                                    vertical: 10,
-                                  ),
+                                      horizontal: 20, vertical: 10),
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  backgroundColor: Colors.blueAccent,
+                                      borderRadius: BorderRadius.circular(8)),
+                                  backgroundColor: Colors.orange,
                                 ),
                               ),
                             ],
@@ -581,6 +649,39 @@ class LanderPageState extends State<LanderPage>
                 Navigator.pop(context);
               },
             ),
+            ListTile(
+              title: const Text("Face Verification"),
+              leading: const Icon(Icons.face),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => FaceVerificationPage()));
+              },
+            ),
+            // ListTile(
+            //   title: const Text("Face verification"),
+            //   leading: const Icon(Icons.face),
+            //   onTap: () async {
+            //     Navigator.pop(context);
+            //     SharedPreferences prefs = await SharedPreferences.getInstance();
+            //     int? employeeId = prefs.getInt('employee_id');
+
+            //     if (employeeId == null) {
+            //       Navigator.push(
+            //         context,
+            //         MaterialPageRoute(
+            //             builder: (context) => FaceVerificationPage()),
+            //       );
+            //     } else {
+            //       Navigator.pushReplacement(
+            //         context,
+            //         MaterialPageRoute(builder: (context) => CheckInPage()),
+            //       );
+            //     }
+            //   },
+            // ),
             ListTile(
               title: const Text("Enquiries"),
               leading: const Icon(Icons.question_answer_outlined),

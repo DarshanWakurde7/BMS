@@ -2,6 +2,7 @@ import 'package:bms/ApiCalls/apiCalls.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:html/parser.dart' show parse;
 
 class CommentPage extends StatefulWidget {
   final int accid, projectId, projecttaskid, created_by;
@@ -166,17 +167,30 @@ class ChatMessageWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    var document = parse(message);
+    String parsedMessage = parse(document.body!.text).documentElement!.text;
+
+    // Function to split the message into separate lines based on a delimiter
+    List<String> splitMessage(String message) {
+      // Replace line breaks with a delimiter if necessary
+      return message.split(RegExp(r'[\r\n]+'));
+    }
+
+    List<String> lines = splitMessage(parsedMessage);
+
     return Container(
+      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       child: Card(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: EdgeInsets.all(10),
-                  child: CircleAvatar(
+        elevation: 3,
+        margin: EdgeInsets.symmetric(vertical: 5),
+        child: Padding(
+          padding: const EdgeInsets.all(10.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  CircleAvatar(
                     backgroundColor: Colors.black,
                     child: Text(
                       username[0],
@@ -184,25 +198,46 @@ class ChatMessageWidget extends StatelessWidget {
                     ),
                     radius: 20,
                   ),
-                ),
-                Text(
-                  username,
-                  style: GoogleFonts.lato(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w400,
-                    color: Colors.blueAccent,
+                  SizedBox(width: 10),
+                  Text(
+                    username,
+                    style: GoogleFonts.lato(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w400,
+                      color: Colors.blueAccent,
+                    ),
                   ),
-                )
-              ],
-            ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(15, 0, 15, 5),
-              child: Text(
-                "Comment: " + message,
-                style: GoogleFonts.lato(),
+                ],
               ),
-            ),
-          ],
+              SizedBox(height: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: lines
+                    .map((line) => Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2.0),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '• ',
+                                style: GoogleFonts.lato(),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  line.trim(),
+                                  style: GoogleFonts.lato(),
+                                  textAlign: TextAlign.left,
+                                  softWrap: true,
+                                  overflow: TextOverflow.visible,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ))
+                    .toList(),
+              ),
+            ],
+          ),
         ),
       ),
     );

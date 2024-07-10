@@ -200,7 +200,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
     if (data['success']) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text("Login SuccessFul"),
+        content: Text("Login Successful"),
         backgroundColor: Colors.blueAccent,
       ));
 

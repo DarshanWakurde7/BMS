@@ -35,6 +35,8 @@ dependencies:
   image_picker: ^1.1.2
   camera: ^0.11.0+1
   qr_code_scanner: ^1.0.1
+  stop_watch_timer: ^3.1.1
+  html: ^0.15.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
