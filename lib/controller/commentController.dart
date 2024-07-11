@@ -9,8 +9,6 @@ var isLoading=true.obs;
 Future<List<EnquiresCommentss>> getEnquireComments(int accid, int cardid)async{
   isLoading(true);
 commentsdata=await  ApiCalls.getEnquireComment(accid.toString(), cardid.toString());
-
-
 if(commentsdata.isEmpty){
   isLoading(false);
   return commentsdata;

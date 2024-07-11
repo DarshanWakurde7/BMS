@@ -233,10 +233,45 @@ class LanderPageState extends State<LanderPage>
       }
     });
   }
+ Timer? _timer;
+    void startPolling() {
+    _timer = Timer.periodic(Duration(seconds: 10), (timer) async {
+      await _fetchNotifications();
+    });
+  }
+
+
+String count="0";
+ Future<void> _fetchNotifications() async {
+   SharedPreferences pref= await SharedPreferences.getInstance();
+    try {
+      final response = await http.post(Uri.parse("https://portalwiz.net/laravelapi/public/api/count_unread_notifications"),body: {
+    "to_user_id": "${pref.getInt('user_id').toString()}"
+});
+
+      if (response.statusCode == 200) {
+        var data=jsonDecode(response.body);
+        print(data["unread_count"]);
+        setState(() {
+          count="${data["unread_count"]}";
+        });
+
+        print('New notifications: ${response.body}');
+      } else {
+    
+        print('Failed to load notifications');
+      }
+    } catch (e) {
+     
+      print('Error: $e');
+    }
+  }
+
 
   late TabController tabController;
   @override
   void initState() {
+    startPolling();
     getPunched();
     ApiCalls.getDataofCards(1.toString());
 
@@ -751,7 +786,16 @@ class LanderPageState extends State<LanderPage>
                         profileUrl),
               ),
               IconButton(
-                icon: Icon(Icons.notifications),
+                icon: Stack(
+                  children: [
+                    
+                    Icon(Icons.notifications),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 12.5),
+                      child: CircleAvatar(radius: 6,child: Text("${count}",style: TextStyle(color: Colors.white,fontSize: 8),),backgroundColor: Colors.redAccent,),
+                    ),
+                  ],
+                ),
                 onPressed: () {
                   Navigator.push(
                     context,
