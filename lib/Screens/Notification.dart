@@ -1,20 +1,57 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
-void main() {
-  runApp(MyApp());
-}
 
-class MyApp extends StatelessWidget {
+class NotificationPage extends StatefulWidget {
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      home: NotificationPage(),
-    );
-  }
+  State<NotificationPage> createState() => _NotificationPageState();
 }
 
-class NotificationPage extends StatelessWidget {
+class _NotificationPageState extends State<NotificationPage> {
+
+List data=[];
+List<String> monthcurr = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+@override
+  void initState() {
+    // TODO: implement initState
+    _fetchNotifications();
+
+    super.initState();
+  }
+
+   Future<void> _fetchNotifications() async {
+    SharedPreferences pref= await SharedPreferences.getInstance();
+    try {
+      final response = await http.post(Uri.parse("https://portalwiz.net/laravelapi/public/api/fetch_user_notifications"),body:{
+    "user_id": "${pref.getInt('user_id').toString()}"
+});
+
+      if (response.statusCode == 200) {
+        // Process your notification data
+
+        for(Map<String,dynamic> i in jsonDecode(response.body)){
+          data.add(i);
+          print(data.length);
+
+        }
+        setState(() {
+          data;
+        });
+
+      } else {
+        // Handle the error
+        print('Failed to load notifications');
+      }
+    } catch (e) {
+      // Handle any exceptions
+      print('Error: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -38,42 +75,21 @@ class NotificationPage extends StatelessWidget {
       ),
       body: Padding(
         padding: const EdgeInsets.all(8.0),
-        child: ListView(
-          children: [
-            NotificationCard(
-              date: '01',
-              month: 'May',
-              title: 'Task Assignment Notification',
-              description:
-                  'You are assigned to a new task kds feature with deadline on 2024-05-02 17:25',
-            ),
-            NotificationCard(
-              date: '01',
-              month: 'May',
-              title: 'Project Notification',
-              description:
-                  'You are assigned to a new project Ahpu new feature with deadline on 2024-05-24',
-            ),
-            NotificationCard(
-              date: '01',
-              month: 'May',
-              title: 'Leave Status Update',
-              description:
-                  'Your 2 day leave request requested on May 01 2024 05:21 AM has been Approved',
-            ),
-            NotificationCard(
-              date: '01',
-              month: 'May',
-              title: 'Leave Status Update',
-              description:
-                  'Your 1 day leave request requested on May 01 2024 05:18 AM has been Approved',
-            ),
-          ],
+        child: ListView.builder(itemBuilder: (context,index){
+
+
+
+          return NotificationCard(date: (data[index]["created_date"].split("-"))[2], month:monthcurr[int.parse((data[index]["created_date"].split("-"))[1])] , title: data[index]["project_name"], description: data[index]["notification_assign"]);
+        },
+        itemCount: data.length,
         ),
       ),
     );
   }
 }
+
+
+
 
 class NotificationCard extends StatelessWidget {
   final String date;
