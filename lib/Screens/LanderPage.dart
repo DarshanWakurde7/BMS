@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:bms/Screens/Activepage.dart';
 import 'package:bms/Screens/AddProject.dart';
+import 'package:bms/Screens/DailyTasks.dart';
 import 'package:bms/Screens/Enquire.dart';
 import 'package:bms/Screens/NotActive.dart';
 import 'package:bms/Screens/Notification.dart';
@@ -60,6 +61,8 @@ class LanderPageState extends State<LanderPage>
       print('Display Time: $displayTime');
     },
   );
+
+  int roleid=0;
 
   var backColor;
   late bool light;
@@ -217,6 +220,7 @@ class LanderPageState extends State<LanderPage>
     final pref = await SharedPreferences.getInstance();
 
     setState(() {
+      roleid=pref.getInt("role_id")??0;
       profileUrl = pref.getString('profile_path') ?? "";
       if (pref.getInt('punch_Status') == 1) {
         backColor = Colors.greenAccent;
@@ -622,7 +626,7 @@ class LanderPageState extends State<LanderPage>
           padding: EdgeInsets.zero,
           children: [
             SizedBox(
-              height: MediaQuery.of(context).size.width * 0.5,
+              height: MediaQuery.of(context).size.width * 0.2,
             ),
             CircleAvatar(
               radius: 38,
@@ -675,15 +679,29 @@ class LanderPageState extends State<LanderPage>
               },
             ),
 
+            Visibility(
+              // visible: (roleid==1),
+              child: ListTile(
+                title: const Text("PM Sheet"),
+                leading: const Icon(Icons.manage_search),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => DailyTasks(title: "Data task",)));
+                },
+              ),
+            ),
             ListTile(
-              title: const Text("PM Sheet"),
-              leading: const Icon(Icons.manage_search),
+              title: const Text("Daily Tasks"),
+              leading: const Icon(Icons.task_sharp),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (context) => ProjectManagerSheet()));
+                        builder: (context) => DailyTasks(title: "Tasks",)));
               },
             ),
             // ListTile(

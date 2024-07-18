@@ -1,0 +1,149 @@
+diff --git a/android/app/build.gradle b/android/app/build.gradle
+index ba57763..ebf1df1 100644
+--- a/android/app/build.gradle
++++ b/android/app/build.gradle
+@@ -1,7 +1,6 @@
+ plugins {
+     id "com.android.application"
+     id "kotlin-android"
+-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+     id "dev.flutter.flutter-gradle-plugin"
+ }
+ 
+@@ -22,48 +21,48 @@ def flutterVersionName = localProperties.getProperty("flutter.versionName")
+ if (flutterVersionName == null) {
+     flutterVersionName = "1.0"
+ }
++
+ def keystoreProperties = new Properties()
+ def keystorePropertiesFile = rootProject.file('key.properties')
+ if (keystorePropertiesFile.exists()) {
+-      keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+- }
++    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
++}
++
+ android {
+-    namespace = "com.example.bms"
+-    compileSdk = flutter.compileSdkVersion
+-    ndkVersion = flutter.ndkVersion
++    compileSdkVersion 34
++    ndkVersion "21.4.7075529" // Replace with your NDK version
+ 
+-    compileOptions {
+-        sourceCompatibility = JavaVersion.VERSION_1_8
+-        targetCompatibility = JavaVersion.VERSION_1_8
++    defaultConfig {
++        
++        applicationId "com.portalwizbms.android.bms"
++        minSdkVersion 23
++        targetSdkVersion 34
++        versionCode flutterVersionCode.toInteger()
++        versionName flutterVersionName
++        multiDexEnabled true
++        // Add namespace here
++        namespace 'com.portalwizbms.android.bms'
+     }
+ 
+-    defaultConfig {
+-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
+-        applicationId = "com.example.bms"
+-        // You can update the following values to match your application needs.
+-        // For more information, see: https://docs.flutter.dev/deployment/android#reviewing-the-gradle-build-configuration.
+-        minSdk = 23
+-        targetSdk = flutter.targetSdkVersion
+-        versionCode = flutterVersionCode.toInteger()
+-        versionName = flutterVersionName
++    signingConfigs {
++        release {
++            keyAlias keystoreProperties['keyAlias']
++            keyPassword keystoreProperties['keyPassword']
++            storeFile file(keystoreProperties['storeFile'])
++            storePassword keystoreProperties['storePassword']
++        }
+     }
+-signingConfigs {
+-      release {
+-          keyAlias keystoreProperties['keyAlias']
+-         keyPassword keystoreProperties['keyPassword']
+-         storeFile keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
+-         storePassword keystoreProperties['storePassword']
+-     }
+- }
++
+     buildTypes {
+         release {
+-            // TODO: Add your own signing config for the release build.
+-            // Signing with the debug keys for now, so `flutter run --release` works.
+-            signingConfig = signingConfigs.debug
++            signingConfig signingConfigs.release
++            minifyEnabled true
++            shrinkResources true
++            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+         }
+     }
+ }
+ 
+ flutter {
+-    source = "../.."
++    source '../..'
+ }
+diff --git a/android/app/src/main/kotlin/com/example/bms/MainActivity.kt b/android/app/src/main/kotlin/com/example/bms/MainActivity.kt
+index 43260c4..6ebd969 100644
+--- a/android/app/src/main/kotlin/com/example/bms/MainActivity.kt
++++ b/android/app/src/main/kotlin/com/example/bms/MainActivity.kt
+@@ -1,5 +1,6 @@
+-package com.example.bms
++package com.portalwizbms.android.bms
+ 
+ import io.flutter.embedding.android.FlutterActivity
+ 
+-class MainActivity: FlutterActivity()
++class MainActivity : FlutterActivity() {
++}
+diff --git a/lib/controller/commentController.dart b/lib/controller/commentController.dart
+index 66490ba..dd3be16 100644
+--- a/lib/controller/commentController.dart
++++ b/lib/controller/commentController.dart
+@@ -9,8 +9,6 @@ var isLoading=true.obs;
+ Future<List<EnquiresCommentss>> getEnquireComments(int accid, int cardid)async{
+   isLoading(true);
+ commentsdata=await  ApiCalls.getEnquireComment(accid.toString(), cardid.toString());
+-
+-
+ if(commentsdata.isEmpty){
+   isLoading(false);
+   return commentsdata;
+diff --git a/pubspec.yaml b/pubspec.yaml
+index 35ba5d5..366601f 100644
+--- a/pubspec.yaml
++++ b/pubspec.yaml
+@@ -1,7 +1,7 @@
+ name: bms
+ description: "A new Flutter project."
+ publish_to: 'none'
+-version: 1.0.0+56
++version: 1.0.1+70
+ 
+ environment:
+   sdk: '>=3.4.1 <4.0.0'
+@@ -30,10 +30,11 @@ dependencies:
+   file_picker: ^8.0.3
+   fluttertoast: ^8.2.5
+   flutter_pdfview: ^1.3.2
+-  webview_flutter: ^ 2.8.0
++  webview_flutter: ^2.8.0
+   path_provider: ^2.0.11
+   image_picker: ^1.1.2
+   camera: ^0.11.0+1
++
+ dev_dependencies:
+   flutter_test:
+     sdk: flutter
+@@ -44,4 +45,4 @@ flutter:
+ 
+   assets:
+     - asset/image/
+-    - asset/animation/
+\ No newline at end of file
++    - asset/animation/

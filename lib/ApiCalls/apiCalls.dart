@@ -1202,12 +1202,29 @@ class ApiCalls {
     final response = await http.post(
       Uri.parse(
           'https://pw-bms-dev.portalwiz.in/laravelapi/public/api/add_daily_plan'),
-      headers: {"Content-Type": "application/json"},
-      body: json.encode(planData),
+ 
+      body: planData,
     );
 
     if (response.statusCode == 200) {
       final responseBody = json.decode(response.body);
+      print(response.body);
+      return responseBody['success'];
+    } else {
+      throw Exception('Failed to insert data');
+    }
+  }
+  static Future<bool> updateDailyplan(Map<String, dynamic> planData) async {
+    final response = await http.post(
+      Uri.parse(
+          'https://pw-bms-dev.portalwiz.in/laravelapi/public/api/update_daily_plan'),
+ 
+      body: planData,
+    );
+
+    if (response.statusCode == 200) {
+      final responseBody = json.decode(response.body);
+      print(response.body);
       return responseBody['success'];
     } else {
       throw Exception('Failed to insert data');

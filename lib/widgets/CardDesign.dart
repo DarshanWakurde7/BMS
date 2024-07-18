@@ -8,6 +8,7 @@ import 'package:flutter/cupertino.dart';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class myCards1 extends StatefulWidget {
   myCards1(
@@ -50,6 +51,7 @@ class _myCards1State extends State<myCards1> {
 
   String Status = "Status";
   String priority = "Priority";
+  int role_id=0;
   DateTime selectedDate = DateTime.now();
   DateTime timesheetdate = DateTime.now();
   DateTime toselectedDate = DateTime.now();
@@ -65,6 +67,13 @@ class _myCards1State extends State<myCards1> {
         : const Color.fromRGBO(255, 255, 231, 1);
 
     super.initState();
+  }
+
+  getrole()async{
+    SharedPreferences sharedPreferences=await SharedPreferences.getInstance();
+setState(() {
+  role_id=sharedPreferences.getInt("role_id")??0;
+});
   }
 
   @override
@@ -654,7 +663,7 @@ class _myCards1State extends State<myCards1> {
                   // Text('Add Time',style: TextStyle(fontWeight: FontWeight.w600,color: Colors.blueAccent), // )
 
                   ),
-              PopupMenuButton<PopupMenu>(
+            (role_id==1)?  PopupMenuButton<PopupMenu>(
                   surfaceTintColor: Colors.white,
                   icon: const Icon(
                     Icons.select_all,
@@ -747,7 +756,7 @@ class _myCards1State extends State<myCards1> {
                     }
                   },
                   itemBuilder: (context) => const [
-                        PopupMenuItem(
+                     PopupMenuItem(
                             value: PopupMenu.Add,
                             child: Row(
                                 mainAxisAlignment:
@@ -795,7 +804,34 @@ class _myCards1State extends State<myCards1> {
                                   ),
                                   Icon(Icons.comment_bank_outlined)
                                 ])),
-                      ]),
+                      ]):Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                             
+                                  GestureDetector(
+                                    onTap: (){
+                                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => CommentPage(
+                                    accid:
+                                        dataOfCards[widget.index].accountId ??
+                                            1,
+                                    projectId:
+                                        dataOfCards[widget.index].projectId ??
+                                            0,
+                                    projecttaskid: dataOfCards[widget.index]
+                                            .projectTaskId ??
+                                        0,
+                                    created_by:
+                                        dataOfCards[widget.index].createdBy ??
+                                            0,
+                                    showProject: true,
+                                  )));
+                                    },
+                                    child: Icon(Icons.comment_bank_outlined))
+                                ]),
             ])
           ],
         ),
