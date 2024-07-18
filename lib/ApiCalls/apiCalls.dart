@@ -1168,4 +1168,49 @@ class ApiCalls {
       throw Exception('Failed to load projects');
     }
   }
+
+  static Future<List<Map<String, dynamic>>> fetchEmployees(
+      String accountId) async {
+    final response = await http.post(
+      Uri.parse(
+          'https://pw-bms-dev.portalwiz.in/laravelapi/public/api/fetch_account_employee'),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: jsonEncode(<String, String>{
+        'account_id': accountId,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      List<dynamic> data = jsonDecode(response.body);
+      List<Map<String, dynamic>> employees = [];
+      data.forEach((employee) {
+        employees.add({
+          'first_name': employee['first_name'],
+          'last_name': employee['last_name'],
+          'user_id': employee['user_id'],
+        });
+      });
+      return employees;
+    } else {
+      throw Exception('Failed to fetch employees');
+    }
+  }
+
+  static Future<bool> addDailyPlan(Map<String, dynamic> planData) async {
+    final response = await http.post(
+      Uri.parse(
+          'https://pw-bms-dev.portalwiz.in/laravelapi/public/api/add_daily_plan'),
+      headers: {"Content-Type": "application/json"},
+      body: json.encode(planData),
+    );
+
+    if (response.statusCode == 200) {
+      final responseBody = json.decode(response.body);
+      return responseBody['success'];
+    } else {
+      throw Exception('Failed to insert data');
+    }
+  }
 }

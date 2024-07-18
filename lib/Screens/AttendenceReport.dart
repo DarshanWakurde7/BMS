@@ -68,7 +68,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         final data = jsonDecode(response.body);
         if (data['status'] == 'success') {
           List<AttendanceRecord> records =
-              _processAttendanceData(data['attendance'], data['total_hours']);
+              _processAttendanceData(data['attendance']);
           setState(() {
             attendanceRecords = records;
           });
@@ -93,8 +93,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     }
   }
 
-  List<AttendanceRecord> _processAttendanceData(
-      List<dynamic> attendanceData, double totalHours) {
+  List<AttendanceRecord> _processAttendanceData(List<dynamic> attendanceData) {
     final firstDayOfMonth = DateTime(currentDate.year, currentDate.month, 1);
     final lastDayOfMonth = DateTime(currentDate.year, currentDate.month + 1, 0);
 
@@ -107,13 +106,16 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           : null;
 
       int day = checkInTime.day;
+      double totalHours = checkOutTime != null
+          ? (checkOutTime.difference(checkInTime).inMinutes / 60).toDouble()
+          : 0.0;
+
       recordsMap[day] = AttendanceRecord(
         day: DateFormat('d').format(checkInTime),
         weekday: DateFormat('EEE').format(checkInTime).toUpperCase(),
         punchIn: _formatToIST(checkInTime),
         punchOut: checkOutTime != null ? _formatToIST(checkOutTime) : '',
-        totalHours:
-            checkOutTime != null ? '${totalHours.toStringAsFixed(2)}h' : '',
+        totalHours: totalHours.toStringAsFixed(2) + 'h',
       );
     }
 
