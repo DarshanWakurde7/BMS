@@ -170,9 +170,7 @@ class ChatMessageWidget extends StatelessWidget {
     var document = parse(message);
     String parsedMessage = parse(document.body!.text).documentElement!.text;
 
-    // Function to split the message into separate lines based on a delimiter
     List<String> splitMessage(String message) {
-      // Replace line breaks with a delimiter if necessary
       return message.split(RegExp(r'[\r\n]+'));
     }
 

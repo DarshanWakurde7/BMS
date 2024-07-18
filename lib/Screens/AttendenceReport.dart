@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AttendanceScreen extends StatefulWidget {
   @override
@@ -8,43 +11,131 @@ class AttendanceScreen extends StatefulWidget {
 
 class _AttendanceScreenState extends State<AttendanceScreen> {
   DateTime currentDate = DateTime.now();
+  List<AttendanceRecord> attendanceRecords = [];
+  bool isLoading = false;
+  String? errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchAttendanceData();
+  }
 
   void _previousMonth() {
     setState(() {
-      currentDate = DateTime(currentDate.year, currentDate.month - 1);
+      currentDate = DateTime(currentDate.year, currentDate.month - 1, 1);
+      _fetchAttendanceData();
     });
   }
 
   void _nextMonth() {
     setState(() {
-      currentDate = DateTime(currentDate.year, currentDate.month + 1);
+      currentDate = DateTime(currentDate.year, currentDate.month + 1, 1);
+      _fetchAttendanceData();
     });
   }
 
-  List<AttendanceRecord> _generateAttendanceRecords(DateTime date) {
-    int daysInMonth = DateTime(date.year, date.month + 1, 0).day;
-    List<AttendanceRecord> records = [];
+  String _formatToIST(DateTime dateTime) {
+    final istTime = dateTime.add(Duration(hours: 5, minutes: 30));
+    return DateFormat('hh:mm a').format(istTime);
+  }
 
-    for (int i = 1; i <= daysInMonth; i++) {
-      DateTime day = DateTime(date.year, date.month, i);
-      String weekday = DateFormat('EEE').format(day).toUpperCase();
+  Future<void> _fetchAttendanceData() async {
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
 
-      records.add(AttendanceRecord(
-        day: DateFormat('d').format(day),
-        weekday: weekday,
-        punchIn: '09:00 AM',
-        punchOut: i % 6 == 0 ? '' : '06:00 PM', // No punch out for weekends
-        totalHours: i % 6 == 0 ? '' : '9h 0m',
-      ));
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      int? employeeId = prefs.getInt('employee_id');
+
+      if (employeeId == null) {
+        setState(() {
+          errorMessage = 'Employee ID not found';
+        });
+        return;
+      }
+
+      final response = await http.post(
+        Uri.parse(
+            'http://91.108.111.222:8000/attendance/fetch_employee_status/'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'employee_id': employeeId}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['status'] == 'success') {
+          List<AttendanceRecord> records =
+              _processAttendanceData(data['attendance'], data['total_hours']);
+          setState(() {
+            attendanceRecords = records;
+          });
+        } else {
+          setState(() {
+            errorMessage = data['message'];
+          });
+        }
+      } else {
+        setState(() {
+          errorMessage = 'Failed to fetch data';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        errorMessage = e.toString();
+      });
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
     }
+  }
+
+  List<AttendanceRecord> _processAttendanceData(
+      List<dynamic> attendanceData, double totalHours) {
+    final firstDayOfMonth = DateTime(currentDate.year, currentDate.month, 1);
+    final lastDayOfMonth = DateTime(currentDate.year, currentDate.month + 1, 0);
+
+    Map<int, AttendanceRecord> recordsMap = {};
+
+    for (var record in attendanceData) {
+      DateTime checkInTime = DateTime.parse(record['check_in_time']);
+      DateTime? checkOutTime = record['check_out_time'] != null
+          ? DateTime.parse(record['check_out_time'])
+          : null;
+
+      int day = checkInTime.day;
+      recordsMap[day] = AttendanceRecord(
+        day: DateFormat('d').format(checkInTime),
+        weekday: DateFormat('EEE').format(checkInTime).toUpperCase(),
+        punchIn: _formatToIST(checkInTime),
+        punchOut: checkOutTime != null ? _formatToIST(checkOutTime) : '',
+        totalHours:
+            checkOutTime != null ? '${totalHours.toStringAsFixed(2)}h' : '',
+      );
+    }
+
+    List<AttendanceRecord> records = [];
+    for (int i = 1; i <= lastDayOfMonth.day; i++) {
+      final date = DateTime(currentDate.year, currentDate.month, i);
+      final weekday = DateFormat('EEE').format(date).toUpperCase();
+      records.add(recordsMap[i] ??
+          AttendanceRecord(
+            day: DateFormat('d').format(date),
+            weekday: weekday,
+            punchIn: '',
+            punchOut: '',
+            totalHours: '',
+          ));
+    }
+
     return records;
   }
 
   @override
   Widget build(BuildContext context) {
-    List<AttendanceRecord> attendanceRecords =
-        _generateAttendanceRecords(currentDate);
-
     return Scaffold(
       body: Column(
         children: [
@@ -69,12 +160,16 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             ),
           ),
           Expanded(
-            child: ListView.builder(
-              itemCount: attendanceRecords.length,
-              itemBuilder: (context, index) {
-                return AttendanceCard(attendanceRecords[index]);
-              },
-            ),
+            child: isLoading
+                ? Center(child: CircularProgressIndicator())
+                : errorMessage != null
+                    ? Center(child: Text(errorMessage!))
+                    : ListView.builder(
+                        itemCount: attendanceRecords.length,
+                        itemBuilder: (context, index) {
+                          return AttendanceCard(attendanceRecords[index]);
+                        },
+                      ),
           ),
         ],
       ),

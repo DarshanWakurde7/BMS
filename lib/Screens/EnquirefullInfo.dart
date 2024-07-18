@@ -220,7 +220,7 @@ class _EnquireFullInfoState extends State<EnquireFullInfo> {
                     TextFormField(
                       controller: company,
                       decoration: InputDecoration(
-                          label: Text("Comapny Name"),
+                          label: Text("Company Name"),
                           contentPadding: EdgeInsets.zero,
                           isDense: true,
                           labelStyle: TextStyle(fontSize: 14)

@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:lottie/lottie.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'package:bms/Screens/face_verification.dart';
 
 class CheckInPage extends StatefulWidget {
   @override
@@ -26,6 +27,7 @@ class _CheckInPageState extends State<CheckInPage>
   DateTime? checkOutTime;
   Stopwatch _stopwatch = Stopwatch();
   Timer? _timer;
+  Duration _elapsedDuration = Duration.zero;
 
   final ImagePicker _picker = ImagePicker();
 
@@ -93,11 +95,14 @@ class _CheckInPageState extends State<CheckInPage>
         checkOutTime = null;
       }
 
-      if (isCheckedIn) {
+      if (isCheckedIn && checkInTime != null) {
+        _elapsedDuration = DateTime.now().difference(checkInTime!);
         _stopwatch.start();
         _timer = Timer.periodic(Duration(seconds: 1), (timer) {
           if (!mounted) return;
-          setState(() {});
+          setState(() {
+            _elapsedDuration = DateTime.now().difference(checkInTime!);
+          });
         });
       }
     });
@@ -146,7 +151,6 @@ class _CheckInPageState extends State<CheckInPage>
     try {
       var response = await request.send().timeout(Duration(seconds: 60));
 
-      // Read and decode the response
       var streamedResponse = await response.stream.bytesToString();
       var jsonResponse = json.decode(streamedResponse);
 
@@ -159,22 +163,29 @@ class _CheckInPageState extends State<CheckInPage>
         if (jsonResponse['status'] == 'success') {
           setState(() {
             if (isCheckedIn) {
+              // Check-out successful
+              print('Check-out successful');
               checkOutTime = DateTime.parse(jsonResponse['check_out_time']);
               _stopwatch.stop();
               _timer?.cancel();
+              isCheckedIn = false;
             } else {
-              isCheckedIn = !isCheckedIn;
-              if (isCheckedIn) {
-                checkInTime = DateTime.parse(jsonResponse['check_in_time']);
-                _startStopwatch();
-                checkOutTime = null;
-              }
+              // Check-in successful
+              print('Check-in successful');
+              isCheckedIn = true;
+              checkInTime = DateTime.parse(jsonResponse['check_in_time']);
+              _elapsedDuration = Duration.zero;
+              _stopwatch.start();
+              checkOutTime = null;
             }
           });
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-                content: Text(
-                    '${isCheckedIn ? 'Check-in' : 'Check-out'} successful')),
+              content: Text(
+                '${isCheckedIn ? 'Check-in' : 'Check-out'} successful',
+              ),
+            ),
           );
           _saveState();
         } else {
@@ -198,14 +209,6 @@ class _CheckInPageState extends State<CheckInPage>
     }
   }
 
-  void _startStopwatch() {
-    _stopwatch.start();
-    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
-      if (!mounted) return;
-      setState(() {});
-    });
-  }
-
   String _formatDuration(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, "0");
     String twoDigitHours = twoDigits(duration.inHours);
@@ -217,7 +220,7 @@ class _CheckInPageState extends State<CheckInPage>
   String _formatDateTime(DateTime? dateTime) {
     if (dateTime == null) return 'N/A';
     final istTime = dateTime.toLocal();
-    return '${_formatTime(istTime)} ${istTime.day}/${istTime.month}/${istTime.year} IST';
+    return '${_formatTime(istTime)} ${istTime.day}/${istTime.month}/${istTime.year} ';
   }
 
   String _formatTime(DateTime dateTime) {
@@ -226,6 +229,36 @@ class _CheckInPageState extends State<CheckInPage>
     String minutes = twoDigits(dateTime.minute);
     String seconds = twoDigits(dateTime.second);
     return '$hours:$minutes:$seconds';
+  }
+
+  Future<void> _checkAndShowDialog() async {
+    if (_employeeId == null) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('User Not Registered'),
+            content: Text('You are not registered. Please register first.'),
+            actions: <Widget>[
+              TextButton(
+                child: Text('Register'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => FaceVerificationPage(),
+                    ),
+                  ).then((_) => _initializeUser());
+                },
+              ),
+            ],
+          );
+        },
+      );
+    } else {
+      _pickImage(ImageSource.camera);
+    }
   }
 
   @override
@@ -252,7 +285,7 @@ class _CheckInPageState extends State<CheckInPage>
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Text('Welcome, ${_employeeId ?? 'User'}!'),
+                    Text('Welcome, ${'User'}!'),
                     SizedBox(height: 16.0),
                     Text(isCheckedIn
                         ? 'You are currently checked in.'
@@ -265,7 +298,7 @@ class _CheckInPageState extends State<CheckInPage>
                       ),
                       SizedBox(height: 16.0),
                       Text(
-                        'Elapsed time: ${_formatDuration(_stopwatch.elapsed)}',
+                        'Elapsed time: ${_formatDuration(_elapsedDuration)}',
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ],
@@ -277,7 +310,7 @@ class _CheckInPageState extends State<CheckInPage>
                       ),
                       SizedBox(height: 16.0),
                       Text(
-                        'Total time: ${_formatDuration(_stopwatch.elapsed)}',
+                        'Total time: ${_formatDuration(checkOutTime!.difference(checkInTime!))}',
                         style: TextStyle(
                             fontWeight: FontWeight.bold, fontSize: 20),
                       ),
@@ -342,13 +375,7 @@ class _CheckInPageState extends State<CheckInPage>
                         : SizedBox.shrink(),
                     SizedBox(height: 16.0),
                     ElevatedButton.icon(
-                      onPressed: () {
-                        if (isCheckedIn) {
-                          _pickImage(ImageSource.camera);
-                        } else {
-                          _pickImage(ImageSource.camera);
-                        }
-                      },
+                      onPressed: _checkAndShowDialog,
                       icon: Icon(
                         Icons.camera_alt,
                         color: Colors.white,

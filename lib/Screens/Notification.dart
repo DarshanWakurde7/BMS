@@ -5,17 +5,28 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-
 class NotificationPage extends StatefulWidget {
   @override
   State<NotificationPage> createState() => _NotificationPageState();
 }
 
 class _NotificationPageState extends State<NotificationPage> {
-
-List data=[];
-List<String> monthcurr = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-@override
+  List data = [];
+  List<String> monthcurr = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec"
+  ];
+  @override
   void initState() {
     // TODO: implement initState
     _fetchNotifications();
@@ -23,25 +34,24 @@ List<String> monthcurr = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug"
     super.initState();
   }
 
-   Future<void> _fetchNotifications() async {
-    SharedPreferences pref= await SharedPreferences.getInstance();
+  Future<void> _fetchNotifications() async {
+    SharedPreferences pref = await SharedPreferences.getInstance();
     try {
-      final response = await http.post(Uri.parse("https://portalwiz.net/laravelapi/public/api/fetch_user_notifications"),body:{
-    "user_id": "${pref.getInt('user_id').toString()}"
-});
+      final response = await http.post(
+          Uri.parse(
+              "https://portalwiz.net/laravelapi/public/api/fetch_user_notifications"),
+          body: {"user_id": "${pref.getInt('user_id').toString()}"});
 
       if (response.statusCode == 200) {
         // Process your notification data
 
-        for(Map<String,dynamic> i in jsonDecode(response.body)){
+        for (Map<String, dynamic> i in jsonDecode(response.body)) {
           data.add(i);
           print(data.length);
-
         }
         setState(() {
           data;
         });
-
       } else {
         // Handle the error
         print('Failed to load notifications');
@@ -75,21 +85,21 @@ List<String> monthcurr = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug"
       ),
       body: Padding(
         padding: const EdgeInsets.all(8.0),
-        child: ListView.builder(itemBuilder: (context,index){
-
-
-
-          return NotificationCard(date: (data[index]["created_date"].split("-"))[2], month:monthcurr[int.parse((data[index]["created_date"].split("-"))[1])] , title: data[index]["project_name"], description: data[index]["notification_assign"]);
-        },
-        itemCount: data.length,
+        child: ListView.builder(
+          itemBuilder: (context, index) {
+            return NotificationCard(
+                date: (data[index]["created_date"].split("-"))[2],
+                month: monthcurr[
+                    int.parse((data[index]["created_date"].split("-"))[1])],
+                title: data[index]["project_name"],
+                description: data[index]["notification_assign"]);
+          },
+          itemCount: data.length,
         ),
       ),
     );
   }
 }
-
-
-
 
 class NotificationCard extends StatelessWidget {
   final String date;
@@ -107,9 +117,9 @@ class NotificationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: Colors.white, // Card background color
+      color: Colors.white,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(10),
       ),
       child: Padding(
         padding: const EdgeInsets.all(10.0),

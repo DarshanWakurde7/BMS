@@ -18,9 +18,7 @@ class LeaveTracker extends StatelessWidget {
           actions: [
             PopupMenuButton<String>(
               onSelected: (String value) {
-                // Handle filter selection
                 print('Selected: $value');
-                // Implement your filtering logic here
               },
               itemBuilder: (BuildContext context) {
                 return [
@@ -93,7 +91,7 @@ class _LeaveSectionState extends State<LeaveSection> {
           [futureCasualLeaves, futureSickLeaves, futureElectiveLeaves]),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return SizedBox(); // Return an empty SizedBox to hide the CircularProgressIndicator
+          return SizedBox();
         }
         if (snapshot.hasData) {
           Map<String, dynamic>? casualLeaves = snapshot.data![0];
@@ -213,9 +211,10 @@ class HolidayCard extends StatelessWidget {
     });
 
     return Card(
+      color: Colors.white,
       margin: EdgeInsets.all(8.0),
       child: Padding(
-        padding: EdgeInsets.all(8.0),
+        padding: EdgeInsets.all(16.0),
         child: Container(
           width: 300.0,
           child: Row(
@@ -283,6 +282,7 @@ class LeaveCard extends StatelessWidget {
         width: 300,
         height: 200, // Increase the height parameter as needed
         child: Card(
+          color: Colors.white,
           margin: EdgeInsets.all(8.0),
           child: SingleChildScrollView(
             child: Padding(
@@ -463,9 +463,10 @@ class LeaveHistoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      color: Colors.white,
       margin: EdgeInsets.all(8.0),
       child: Padding(
-        padding: EdgeInsets.all(8.0),
+        padding: EdgeInsets.all(16.0),
         child: Container(
           width: 300.0,
           child: Column(
@@ -583,9 +584,10 @@ class WfhHistoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      color: Colors.white,
       margin: EdgeInsets.all(8.0),
       child: Padding(
-        padding: EdgeInsets.all(8.0),
+        padding: EdgeInsets.all(16.0),
         child: Container(
           width: 300.0,
           child: Column(

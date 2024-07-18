@@ -1025,4 +1025,147 @@ class ApiCalls {
       throw Exception('Failed to fetch cancelled wfh');
     }
   }
+
+  static Future<List<Map<String, dynamic>>> fetchProjectTypes(
+      String accountId) async {
+    final response = await http.post(
+      Uri.parse(
+          'https://portalwiz.net/laravelapi/public/api/fetch_project_types'),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: jsonEncode(<String, String>{
+        'account_id': accountId,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      List<dynamic> data = jsonDecode(response.body);
+      return data.map((item) => item as Map<String, dynamic>).toList();
+    } else {
+      throw Exception('Failed to fetch project types');
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> fetchProjectOwners(
+      String accountId) async {
+    final response = await http.post(
+      Uri.parse(
+          'https://portalwiz.net/laravelapi/public/api/fetch_account_users'),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: jsonEncode(<String, String>{
+        'account_id': accountId,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+    } else {
+      throw Exception('Failed to fetch project owners');
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> fetchCompanies(
+      String accountId) async {
+    final response = await http.post(
+      Uri.parse('https://portalwiz.net/laravelapi/public/api/fetch_companies'),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: jsonEncode(<String, String>{
+        'account_id': accountId,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+    } else {
+      throw Exception('Failed to fetch project companies');
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> fetchProjectStatus(
+      String accountId) async {
+    final response = await http.post(
+      Uri.parse(
+          'https://portalwiz.net/laravelapi/public/api/fetch_project_status'),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: jsonEncode(<String, String>{
+        'account_id': accountId,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+    } else {
+      throw Exception('Failed to fetch project status');
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> fetchPriority() async {
+    final response = await http.get(
+      Uri.parse('https://portalwiz.net/laravelapi/public/api/fetch_priority'),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+    } else {
+      throw Exception('Failed to fetch project priority');
+    }
+  }
+
+  static Future<bool> addProject(Map<String, dynamic> projectData) async {
+    final url = 'https://portalwiz.net/laravelapi/public/api/add_project';
+    final headers = {'Content-Type': 'application/json'};
+    final body = jsonEncode(projectData);
+    print(projectData);
+
+    final response =
+        await http.post(Uri.parse(url), headers: headers, body: body);
+
+    if (response.statusCode == 200) {
+      final responseData = jsonDecode(response.body);
+      return responseData['success'];
+    } else {
+      throw Exception('Failed to add project');
+    }
+  }
+
+  static const String baseUrl =
+      'https://pw-bms-dev.portalwiz.in/laravelapi/public/api/';
+
+  static Future<List<dynamic>> fetchProjects(int statusGroupId) async {
+    final sharedPref = await SharedPreferences.getInstance();
+    int? userId = sharedPref.getInt('user_id');
+    int? accountId = sharedPref.getInt('account_id');
+
+    if (userId == null || accountId == null) {
+      throw Exception('User ID or Account ID not found in Shared Preferences');
+    }
+
+    Uri uri = Uri.parse('${baseUrl}fetch_projects');
+    var body = jsonEncode({
+      'user_id': userId,
+      'account_id': accountId,
+      'status_group_id': statusGroupId
+    });
+
+    final response = await http.post(uri, body: body, headers: {
+      'Content-Type': 'application/json',
+    });
+
+    if (response.statusCode == 200) {
+      List<dynamic> data = jsonDecode(response.body);
+      return data;
+    } else {
+      throw Exception('Failed to load projects');
+    }
+  }
 }

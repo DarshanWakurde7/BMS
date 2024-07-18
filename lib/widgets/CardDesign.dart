@@ -217,7 +217,7 @@ class _myCards1State extends State<myCards1> {
                 Text(
                   'Est',
                   style: GoogleFonts.getFont(
-                    'Lato', // Replace 'Roboto' with the name of the Google Font you want to use
+                    'Lato',
                     textStyle: TextStyle(
                       fontWeight: FontWeight.w500,
                       fontSize: 12,
@@ -230,7 +230,7 @@ class _myCards1State extends State<myCards1> {
                 Text(
                   dataOfCards[widget.index].estEfforts ?? '00',
                   style: GoogleFonts.getFont(
-                    'Lato', // Replace 'Roboto' with the name of the Google Font you want to use
+                    'Lato',
                     textStyle: TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 12,
@@ -411,7 +411,7 @@ class _myCards1State extends State<myCards1> {
                     ),
                   ),
                   SizedBox(
-                    width: 30,
+                    width: 55,
                   ),
                   Text(
                     widget.plandate,
@@ -467,7 +467,7 @@ class _myCards1State extends State<myCards1> {
                   ),
                 ),
                 SizedBox(
-                  width: 20,
+                  width: 42,
                 ),
                 InkWell(
                   child: Text(

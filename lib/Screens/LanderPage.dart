@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:bms/Screens/Activepage.dart';
+import 'package:bms/Screens/AddProject.dart';
 import 'package:bms/Screens/Enquire.dart';
 import 'package:bms/Screens/NotActive.dart';
 import 'package:bms/Screens/Notification.dart';
+import 'package:bms/Screens/Pmsheet.dart';
 import 'package:bms/Screens/QrCode.dart';
 import 'package:bms/Screens/Snooze.dart';
 import 'package:bms/ApiCalls/apiCalls.dart';
@@ -29,6 +31,7 @@ import 'package:bms/Screens/LeaveTracker.dart';
 import 'package:bms/Screens/LeaveRequest.dart';
 import 'package:stop_watch_timer/stop_watch_timer.dart';
 import 'package:bms/Screens/PhotoAttendence.dart';
+import 'package:intl/intl.dart';
 
 List<String> fieldsNames = [
   'Not Started',
@@ -76,11 +79,6 @@ class LanderPageState extends State<LanderPage>
       kit.LatLng(18.5946136, 73.7935348),
       kit.LatLng(18.5941001, 73.7934851),
       kit.LatLng(18.5939405, 73.7932565),
-      // kit.LatLng(18.6801125, 73.8272749),
-      // kit.LatLng(18.6801117, 73.8272666),
-      // kit.LatLng(18.6800993, 73.8272603),
-      // kit.LatLng(18.6800984, 73.8272802),
-      // kit.LatLng(18.6801017, 73.8272581),
     ];
 
     bool serviceEnabled;
@@ -233,40 +231,38 @@ class LanderPageState extends State<LanderPage>
       }
     });
   }
- Timer? _timer;
-    void startPolling() {
+
+  Timer? _timer;
+  void startPolling() {
     _timer = Timer.periodic(Duration(seconds: 10), (timer) async {
       await _fetchNotifications();
     });
   }
 
-
-String count="0";
- Future<void> _fetchNotifications() async {
-   SharedPreferences pref= await SharedPreferences.getInstance();
+  String count = "0";
+  Future<void> _fetchNotifications() async {
+    SharedPreferences pref = await SharedPreferences.getInstance();
     try {
-      final response = await http.post(Uri.parse("https://portalwiz.net/laravelapi/public/api/count_unread_notifications"),body: {
-    "to_user_id": "${pref.getInt('user_id').toString()}"
-});
+      final response = await http.post(
+          Uri.parse(
+              "https://portalwiz.net/laravelapi/public/api/count_unread_notifications"),
+          body: {"to_user_id": "${pref.getInt('user_id').toString()}"});
 
       if (response.statusCode == 200) {
-        var data=jsonDecode(response.body);
+        var data = jsonDecode(response.body);
         print(data["unread_count"]);
         setState(() {
-          count="${data["unread_count"]}";
+          count = "${data["unread_count"]}";
         });
 
         print('New notifications: ${response.body}');
       } else {
-    
         print('Failed to load notifications');
       }
     } catch (e) {
-     
       print('Error: $e');
     }
   }
-
 
   late TabController tabController;
   @override
@@ -387,7 +383,6 @@ String count="0";
         var data = jsonDecode(responseAttendance.body);
 
         if (pref.getString("chekinTime") != null && data['punch_status'] == 0) {
-          // Parse the check-in time
           String checkinTimeString = pref.getString("chekinTime")!;
           DateTime checkinTime = DateTime(
             DateTime.now().year,
@@ -398,13 +393,11 @@ String count="0";
             int.parse(checkinTimeString.split(":")[2]),
           );
 
-          // Calculate the difference between the current time and the check-in time
           DateTime currentDate = DateTime.now().subtract(Duration(
               hours: checkinTime.hour,
               minutes: checkinTime.minute,
               seconds: checkinTime.second));
           _stopWatchTimer.clearPresetTime();
-          // Set the stopwatch timer using the calculated difference
           _stopWatchTimer.setPresetHoursTime(currentDate.hour);
           _stopWatchTimer.setPresetMinuteTime(currentDate.minute);
           _stopWatchTimer.setPresetSecondTime(currentDate.second);
@@ -413,16 +406,15 @@ String count="0";
 
         return {
           'punch_status': data['punch_status'] ?? 0,
-          'time': getTime(responseAttendance) ?? 0
+          'time': getTime(responseAttendance) ?? 0,
+          'created_at': data['data'] != null && data['data'].isNotEmpty
+              ? data['data'][0]['created_at']
+              : null
         };
       } else {
         throw Exception('Failed to fetch attendance data');
       }
     } catch (e) {
-      // ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      //   content: Text("Sorry, failed to fetch attendance data. Try again."),
-      //   backgroundColor: Colors.redAccent,
-      // ));
       return null;
     }
   }
@@ -461,7 +453,7 @@ String count="0";
           print('Total Work Time: $workTime');
         }
 
-        pref.setInt('punch_Status', punchStatus == 1 ? 0 : 1);
+        pref.setInt('punch_Status', punchStatus == 0 ? 1 : 0);
       }
     } on PlatformException {
       // Handle platform exceptions
@@ -484,7 +476,7 @@ String count="0";
                   borderRadius: BorderRadius.circular(25),
                   color: Colors.white,
                 ),
-                width: MediaQuery.of(context).size.width * 0.4,
+                width: MediaQuery.of(context).size.width * 0.7,
                 height: MediaQuery.of(context).size.height * 0.5,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -514,31 +506,30 @@ String count="0";
                           final time = snapshot.data != null
                               ? snapshot.data!['time']
                               : null;
+                          final createdAt = snapshot.data != null
+                              ? snapshot.data!['created_at']
+                              : null;
 
-                          //  bool isNewDay = true;
-                          // if (time != null && time.contains(':')) {
-                          //   try {
-                          //     TimeOfDay parsedTime = TimeOfDay(
-                          //       hour: int.parse(time.split(':')[0]),
-                          //       minute: int.parse(time.split(':')[1]),
-                          //     );
-                          //     DateTime now = DateTime.now();
-                          //     isNewDay = now.hour != parsedTime.hour ||
-                          //         now.minute != parsedTime.minute;
-                          //   } catch (e) {
-                          //     print("Invalid time format: $e");
-                          //   }
-                          // }
+                          DateTime? createdDateTime;
+                          String formattedDate = '';
+
+                          if (createdAt != null) {
+                            createdDateTime = DateTime.parse(createdAt);
+                            formattedDate = DateFormat('dd-MM-yyyy')
+                                .format(createdDateTime);
+                          }
 
                           return Column(
                             children: [
-                              if (time != null)
+                              if (time != null && createdDateTime != null)
                                 Text(
                                   status == 0
-                                      ? " Checked In Time: $time"
-                                      : " Checked Out Time: $time",
+                                      ? "Checked In Time: $time\n($formattedDate)"
+                                      : "Checked Out Time: $time\n($formattedDate)",
                                   style: TextStyle(fontSize: 18),
+                                  textAlign: TextAlign.center,
                                 ),
+
                               SizedBox(height: 20),
                               Text(
                                 "Total in hours",
@@ -556,11 +547,19 @@ String count="0";
                                   return Text(
                                     displayTime,
                                     style: TextStyle(
+                                        color: Colors.blueAccent,
                                         fontSize: 30,
                                         fontWeight: FontWeight.bold),
                                   );
                                 },
                               ),
+                              //  SizedBox(height: 20),
+                              // Text(
+                              //   status == 0
+                              //       ? "You are currently checked in"
+                              //       : "You are currently checked out",
+                              //   style: TextStyle(fontSize: 18),
+                              // ),
                               SizedBox(height: 20),
                               ElevatedButton(
                                 onPressed: () async {
@@ -597,28 +596,6 @@ String count="0";
                                   backgroundColor: (status == 1)
                                       ? Color.fromARGB(255, 76, 175, 172)
                                       : Color.fromARGB(255, 230, 102, 102),
-                                ),
-                              ),
-                              SizedBox(height: 20),
-                              ElevatedButton(
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) => QRViewExample()),
-                                  );
-                                },
-                                child: Text(
-                                  "Scan QR Code",
-                                  style: TextStyle(
-                                      color: Colors.white, fontSize: 18),
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  padding: EdgeInsets.symmetric(
-                                      horizontal: 20, vertical: 10),
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8)),
-                                  backgroundColor: Colors.orange,
                                 ),
                               ),
                             ],
@@ -685,14 +662,28 @@ String count="0";
               },
             ),
             ListTile(
-              title: const Text("Face Verification"),
-              leading: const Icon(Icons.face),
+              title: const Text("Projects"),
+              leading: const Icon(Icons.add_box),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ProjectScreen(),
+                  ),
+                );
+              },
+            ),
+
+            ListTile(
+              title: const Text("PM Sheet"),
+              leading: const Icon(Icons.manage_search),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (context) => FaceVerificationPage()));
+                        builder: (context) => ProjectManagerSheet()));
               },
             ),
             // ListTile(
@@ -788,11 +779,17 @@ String count="0";
               IconButton(
                 icon: Stack(
                   children: [
-                    
                     Icon(Icons.notifications),
                     Padding(
                       padding: const EdgeInsets.only(left: 12.5),
-                      child: CircleAvatar(radius: 6,child: Text("${count}",style: TextStyle(color: Colors.white,fontSize: 8),),backgroundColor: Colors.redAccent,),
+                      child: CircleAvatar(
+                        radius: 6,
+                        child: Text(
+                          "${count}",
+                          style: TextStyle(color: Colors.white, fontSize: 8),
+                        ),
+                        backgroundColor: Colors.redAccent,
+                      ),
                     ),
                   ],
                 ),
@@ -852,7 +849,6 @@ String count="0";
       floatingActionButtonLocation: ExpandableFab.location,
       floatingActionButton: ExpandableFab(
         overlayStyle: ExpandableFabOverlayStyle(
-          // color: Colors.black.withOpacity(0.5),
           blur: 5,
         ),
         children: [
@@ -860,11 +856,9 @@ String count="0";
             onTap: () async {
               SharedPreferences preferences =
                   await SharedPreferences.getInstance();
-
               if (!(preferences.getBool("privacy_Terms") ?? false)) {
                 termsAndCondition();
               }
-
               if (checkLocation) {
                 _showAlertDialog(false);
               } else {
@@ -873,14 +867,42 @@ String count="0";
               }
             },
             child: CircleAvatar(
-              child: const Icon(
-                Icons.calendar_month_outlined,
-                size: 34,
-              ),
-              backgroundColor: backColor,
-              radius: 24,
+              child: Icon(Icons.calendar_month_outlined,
+                  size: 30, color: Colors.white),
+              backgroundColor: Color.fromRGBO(0, 220, 35, 1.0),
+              radius: 30,
             ),
-          )
+          ),
+          InkWell(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => CheckInPage()),
+              );
+            },
+            child: CircleAvatar(
+              child: Icon(
+                Icons.face,
+                size: 30,
+                color: Colors.white,
+              ),
+              backgroundColor: Color.fromRGBO(79, 199, 222, 1),
+              radius: 30,
+            ),
+          ),
+          InkWell(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => QRViewExample()),
+              );
+            },
+            child: CircleAvatar(
+              child: Icon(Icons.qr_code, size: 30, color: Colors.white),
+              backgroundColor: Color.fromRGBO(10, 86, 118, 1),
+              radius: 30,
+            ),
+          ),
         ],
       ),
     );

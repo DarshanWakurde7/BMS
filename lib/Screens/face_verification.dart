@@ -70,9 +70,11 @@ class _FaceVerificationPageState extends State<FaceVerificationPage> {
               content:
                   Text('Employee registered successfully, ID: $employeeId')),
         );
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => CheckInPage()),
+
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => CheckInPage(),
+          ),
         );
       } else {
         String errorMessage =

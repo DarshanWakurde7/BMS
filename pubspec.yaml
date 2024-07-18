@@ -1,7 +1,7 @@
 name: bms
 description: "A new Flutter project."
 publish_to: 'none'
-version: 1.0.1+70
+version: 1.0.1+72
 
 environment:
   sdk: '>=3.4.1 <4.0.0'
@@ -36,6 +36,7 @@ dependencies:
   camera: ^0.11.0+1
   stop_watch_timer: ^3.1.1
   qr_code_scanner: ^1.0.1
+  timezone: ^0.7.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

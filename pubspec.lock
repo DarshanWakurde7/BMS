@@ -486,7 +486,7 @@ packages:
     source: hosted
     version: "6.2.1"
   html:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: html
       sha256: "3a7812d5bcd2894edf53dfaf8cd640876cf6cef50a8f238745c8b8120ea74d3a"
@@ -1007,6 +1007,14 @@ packages:
     description:
       name: test_api
       sha256: "9955ae474176f7ac8ee4e989dadfb411a58c30415bcfb648fa04b2b8a03afa7f"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.7.0"
+  timezone:
+    dependency: "direct main"
+    description:
+      name: timezone
+      sha256: f60f389b14643ee90a3ab96ae414f77b0472e3817b5b4bf5cc9ce81ec0113f78
       url: "https://pub.dev"
     source: hosted
     version: "0.7.0"
