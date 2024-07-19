@@ -104,7 +104,6 @@ class _ProjectManagerSheetState extends State<ProjectManagerSheet> {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Daily Plans Row
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -157,9 +156,7 @@ class _ProjectManagerSheetState extends State<ProjectManagerSheet> {
                         SizedBox(width: 16.0),
                         IconButton(
                           icon: Icon(Icons.copy, color: Colors.blue),
-                          onPressed: () {
-                            // Implement your copy plan logic here
-                          },
+                          onPressed: () {},
                         ),
                         Text(
                           'Copy Plan',
@@ -171,7 +168,7 @@ class _ProjectManagerSheetState extends State<ProjectManagerSheet> {
                       ],
                     ),
                     SizedBox(height: 16.0),
-                    // Dropdown Row
+
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -208,7 +205,7 @@ class _ProjectManagerSheetState extends State<ProjectManagerSheet> {
                       ],
                     ),
                     SizedBox(height: 16.0),
-                    // Entry Field
+
                     TextFormField(
                       controller: _entryController,
                       minLines: 5,

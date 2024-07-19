@@ -37,7 +37,11 @@ dependencies:
   stop_watch_timer: ^3.1.1
   qr_code_scanner: ^1.0.1
   timezone: ^0.7.0
+<<<<<<< HEAD
   date_picker_timeline: ^1.2.6
+=======
+  horizontal_data_table: ^4.0.0
+>>>>>>> 0d5f39f8eab1929cbd783914992c32fd1e497018
 dev_dependencies:
   flutter_test:
     sdk: flutter

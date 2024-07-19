@@ -1,4 +1,6 @@
 import 'package:bms/ApiCalls/apiCalls.dart';
+import 'package:bms/Screens/Dialogs.dart';
+import 'package:bms/Screens/ViewTask.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -761,6 +763,7 @@ class _ProjectManagementScreenState extends State<ProjectManagementScreen> {
                             project['total_act_efforts']?.toString() ?? '--',
                         finalDeliveryDate:
                             project['final_delivery_date'] ?? '--',
+                        projectId: project['project_id'] ?? 0,
                       );
                     },
                   ),
@@ -787,9 +790,7 @@ class FilterButton extends StatelessWidget {
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
           foregroundColor: isSelected ? Colors.white : Colors.blue,
-          backgroundColor: isSelected
-              ? Colors.blue
-              : Colors.white, // Text color based on selection
+          backgroundColor: isSelected ? Colors.blue : Colors.white,
         ),
         child: Text(label),
       ),
@@ -812,6 +813,7 @@ class ProjectCard extends StatelessWidget {
   final String estEffort;
   final String actEffort;
   final String finalDeliveryDate;
+  final int projectId; // Add projectId as a parameter
 
   ProjectCard({
     required this.projectName,
@@ -828,6 +830,7 @@ class ProjectCard extends StatelessWidget {
     required this.estEffort,
     required this.actEffort,
     required this.finalDeliveryDate,
+    required this.projectId, // Initialize projectId
   });
 
   @override
@@ -847,7 +850,7 @@ class ProjectCard extends StatelessWidget {
             Text(
               projectName,
               style: TextStyle(
-                fontSize: 20,
+                fontSize: 15,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -856,7 +859,7 @@ class ProjectCard extends StatelessWidget {
             _buildInfoRow(Icons.sync, projectStatus),
             _buildInfoRow(Icons.person, projectOwner),
             _buildInfoRow(Icons.priority_high, ' $priority'),
-            Divider(),
+            _buildDateTable(),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
@@ -866,7 +869,16 @@ class ProjectCard extends StatelessWidget {
                 ),
                 IconButton(
                   icon: Icon(Icons.hourglass_empty),
-                  onPressed: () {},
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return ViewTaskPage(
+                          projectId: projectId,
+                        );
+                      },
+                    );
+                  },
                 ),
                 IconButton(
                   icon: Icon(Icons.comment),
@@ -874,7 +886,17 @@ class ProjectCard extends StatelessWidget {
                 ),
                 IconButton(
                   icon: Icon(Icons.people),
-                  onPressed: () {},
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return EmployeeDialog(
+                          projectId:
+                              projectId, // Pass projectId to EmployeeDialog
+                        );
+                      },
+                    );
+                  },
                 ),
               ],
             ),
@@ -901,57 +923,164 @@ class ProjectCard extends StatelessWidget {
       ),
     );
   }
+
+  Widget _buildDateTable() {
+    return Table(
+      children: [
+        TableRow(
+          children: [
+            _buildTableHeader('Date Type'),
+            _buildTableHeader('Start Date'),
+            _buildTableHeader('End Date'),
+          ],
+        ),
+        _buildDateTableRow('Estimated', estStartDate, estEndDate),
+        _buildDateTableRow('Planned', planStartDate, planEndDate),
+        _buildDateTableRow('Actual', actStartDate, actEndDate),
+      ],
+    );
+  }
+
+  TableRow _buildDateTableRow(String label, String startDate, String endDate) {
+    return TableRow(
+      children: [
+        _buildTableCell(label),
+        _buildTableCell(startDate),
+        _buildTableCell(endDate),
+      ],
+    );
+  }
+
+  Widget _buildTableHeader(String text) {
+    return Container(
+      padding: const EdgeInsets.all(8.0),
+      color: Color.fromARGB(255, 167, 200, 227),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 14,
+          color: Colors.white,
+        ),
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+
+  Widget _buildTableCell(String text) {
+    return Container(
+      padding: const EdgeInsets.all(8.0),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: Colors.black,
+          ),
+        ),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 14,
+        ),
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
 }
-  // Widget _buildTableHeader(String text) {
-  //   return Padding(
-  //     padding: const EdgeInsets.all(4.0),
-  //     child: Text(
-  //       text,
-  //       style: TextStyle(
-  //         fontWeight: FontWeight.bold,
-  //         fontSize: 14,
-  //       ),
-  //     ),
-  //   );
-  // }
 
-  // TableRow _buildDateTableRow(String label, String startDate, String endDate) {
-  //   return TableRow(
-  //     children: [
-  //       _buildTableCell(label),
-  //       _buildTableCell(startDate),
-  //       _buildTableCell(endDate),
-  //     ],
-  //   );
-  // }
-
-  // Widget _buildTableCell(String text) {
-  //   return Padding(
-  //     padding: const EdgeInsets.all(4.0),
-  //     child: Text(
-  //       text,
-  //       style: TextStyle(
-  //         fontSize: 14,
-  //       ),
-  //     ),
-  //   );
-  // }
-
-  // Widget _buildInfoRow(IconData icon, String text) {
-  //   return Padding(
-  //     padding: const EdgeInsets.symmetric(vertical: 4.0),
-  //     child: Row(
-  //       children: [
-  //         Icon(icon, size: 16, color: Colors.blue),
-  //         SizedBox(width: 8),
-  //         Expanded(
-  //           child: Text(
-  //             text,
-  //             style: TextStyle(fontSize: 16),
-  //           ),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
-
+// class EmployeeDialog extends StatelessWidget {
+//   @override
+//   Widget build(BuildContext context) {
+//     return Dialog(
+//       shape: RoundedRectangleBorder(
+//         borderRadius: BorderRadius.circular(12.0),
+//       ),
+//       child: Container(
+//         width: MediaQuery.of(context).size.width * 0.9,
+//         height: MediaQuery.of(context).size.height * 0.7,
+//         padding: EdgeInsets.all(8.0),
+//         child: Column(
+//           crossAxisAlignment: CrossAxisAlignment.start,
+//           children: [
+//             DropdownButtonFormField<String>(
+//               hint: Text('Select Employee'),
+//               items: <String>['Employee 1', 'Employee 2', 'Employee 3']
+//                   .map((String value) {
+//                 return DropdownMenuItem<String>(
+//                   value: value,
+//                   child: Text(value, style: TextStyle(fontSize: 14)),
+//                 );
+//               }).toList(),
+//               onChanged: (String? value) {
+//                 // Handle dropdown value change
+//               },
+//               decoration: InputDecoration(
+//                 border: OutlineInputBorder(),
+//                 contentPadding:
+//                     EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+//               ),
+//             ),
+//             SizedBox(height: 10),
+//             // Divider(height: 10, color: Colors.grey),
+//             Text(
+//               'Employee List:',
+//               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+//             ),
+//             SizedBox(height: 10),
+//             Expanded(
+//               child: DataTable(
+//                 columnSpacing: 10,
+//                 headingRowHeight: 32,
+//                 dataRowHeight: 32,
+//                 columns: [
+//                   DataColumn(
+//                       label: Text('Name', style: TextStyle(fontSize: 14))),
+//                   DataColumn(
+//                       label: Text('Position', style: TextStyle(fontSize: 14))),
+//                   DataColumn(
+//                       label: Text('Status', style: TextStyle(fontSize: 14))),
+//                   DataColumn(
+//                       label: Text('Actions', style: TextStyle(fontSize: 14))),
+//                 ],
+//                 rows: [
+//                   DataRow(cells: [
+//                     DataCell(Text('Shreyas Kulkarni',
+//                         style: TextStyle(fontSize: 12))),
+//                     DataCell(Text('Software Developer',
+//                         style: TextStyle(fontSize: 12))),
+//                     DataCell(Text('Active', style: TextStyle(fontSize: 12))),
+//                     DataCell(
+//                       Row(
+//                         children: [
+//                           IconButton(
+//                             icon: Icon(Icons.delete, size: 16),
+//                             onPressed: () {
+//                               // Handle delete action
+//                             },
+//                           ),
+//                         ],
+//                       ),
+//                     ),
+//                   ]),
+//                   // Add more DataRow widgets as needed
+//                 ],
+//               ),
+//             ),
+//             SizedBox(height: 10),
+//             Row(
+//               mainAxisAlignment: MainAxisAlignment.end,
+//               children: [
+//                 ElevatedButton(
+//                   onPressed: () {
+//                     // Handle add button action
+//                   },
+//                   child: Text('Add', style: TextStyle(fontSize: 14)),
+//                 ),
+//               ],
+//             ),
+//           ],
+//         ),
+//       ),
+//     );
+//   }
+// }
