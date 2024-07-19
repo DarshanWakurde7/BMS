@@ -1163,6 +1163,12 @@ class ApiCalls {
 
     if (response.statusCode == 200) {
       List<dynamic> data = jsonDecode(response.body);
+
+      List<int> projectIds =
+          data.map<int>((project) => project['project_id'] as int).toList();
+      await sharedPref.setStringList(
+          'project_ids', projectIds.map((id) => id.toString()).toList());
+
       return data;
     } else {
       throw Exception('Failed to load projects');
@@ -1211,6 +1217,58 @@ class ApiCalls {
       return responseBody['success'];
     } else {
       throw Exception('Failed to insert data');
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> fetchUser(String accountId) async {
+    final response = await http.post(
+      Uri.parse(
+          'https://pw-bms-dev.portalwiz.in/laravelapi/public/api/fetch_user'),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: jsonEncode(<String, String>{
+        'account_id': accountId,
+        'role_id': '1',
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      List<dynamic> data = jsonDecode(response.body);
+      List<Map<String, dynamic>> employees = [];
+      data.forEach((employee) {
+        employees.add({
+          'first_name': employee['first_name'],
+          'last_name': employee['last_name'],
+          'user_id': employee['user_id'],
+        });
+      });
+      return employees;
+    } else {
+      throw Exception('Failed to fetch employees');
+    }
+  }
+
+  static const String apiUrl =
+      'https://pw-bms-dev.portalwiz.in/laravelapi/public/api/fetch_tasks_by_project';
+
+  Future<List<Map<String, dynamic>>> fetchTasks(
+      int accountId, int projectId, int statusGroupId) async {
+    final response = await http.post(
+      Uri.parse(apiUrl),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'account_id': accountId,
+        'project_id': projectId,
+        'status_group_id': statusGroupId,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      List<dynamic> data = jsonDecode(response.body);
+      return data.cast<Map<String, dynamic>>();
+    } else {
+      throw Exception('Failed to load tasks');
     }
   }
 }

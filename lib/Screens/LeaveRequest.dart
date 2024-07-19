@@ -225,7 +225,7 @@ class _LeaveRequestState extends State<LeaveRequest> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        leaveRequest['employee_name'],
+                        leaveRequest['employee_name'] ?? 'Unknown Employee',
                         style: GoogleFonts.getFont(
                           'Lato',
                           textStyle: TextStyle(
@@ -235,7 +235,7 @@ class _LeaveRequestState extends State<LeaveRequest> {
                         ),
                       ),
                       Text(
-                        leaveRequest['designation'],
+                        leaveRequest['designation'] ?? 'Unknown Employee',
                         style: GoogleFonts.getFont(
                           'Lato',
                         ),
@@ -528,7 +528,7 @@ class _LeaveRequestState extends State<LeaveRequest> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      wfhRequest['employee_name'],
+                      wfhRequest['employee_name'] ?? 'Unknown Employee',
                       style: GoogleFonts.getFont(
                         'Lato',
                         textStyle: TextStyle(
@@ -538,7 +538,7 @@ class _LeaveRequestState extends State<LeaveRequest> {
                       ),
                     ),
                     Text(
-                      wfhRequest['designation'],
+                      wfhRequest['designation'] ?? 'Unknown Employee',
                       style: GoogleFonts.getFont(
                         'Lato',
                       ),
@@ -795,7 +795,7 @@ Widget _buildApprovedRequestCard(dynamic approvedRequest) {
                   //     fontWeight: FontWeight.bold,
                   //   ),
                   // ),
-                  Text(approvedRequest['designation']),
+                  Text(approvedRequest['designation'] ?? 'Unknown Employee'),
                 ],
               ),
               Spacer(),
