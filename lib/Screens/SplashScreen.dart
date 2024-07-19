@@ -35,7 +35,7 @@ class SplashScreenState extends State<SplashScreen> {
 //  await ApiCalls.getDataofCards(1.toString());
       await ApiCalls.getDataofCards(2.toString());
 
-      await ApiCalls.getStatus(sharedpref.getInt('account_id').toString());
+      await ApiCalls.getStatus(sharedpref.getInt('account_id')??0);
       await ApiCalls.getDataofTimeShaeet(sharedpref.getInt('account_id') ?? 0,
           sharedpref.getInt('user_id') ?? 0);
 

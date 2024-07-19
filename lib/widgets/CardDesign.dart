@@ -5,7 +5,8 @@ import 'package:bms/Screens/TimeSheet.dart';
 import 'package:bms/Screens/addTaskPage.dart';
 import 'package:bms/ApiCalls/apiCalls.dart';
 import 'package:flutter/cupertino.dart';
-
+import "package:bms/pojos/models/TaskStatusDropdown.dart";
+import "package:bms/pojos/models/PriorityDropdown.dart";
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -28,8 +29,8 @@ class myCards1 extends StatefulWidget {
       required this.refresh});
 
   final int index;
-  final List<String> mydata;
-  final List<String> priority;
+  final List<TaskStatusDropdown> mydata;
+  final List<PrioritysDropdown> priority;
   final List<Collaborators> colab;
   final String Title, description, plandate, todate, assigne, taskTypeName;
   final bool isFocused;
@@ -335,9 +336,9 @@ setState(() {
                             )),
                         items: widget.mydata
                             .map((item) => DropdownMenuItem<String>(
-                                value: item,
+                                value: item.taskStatus,
                                 child: Text(
-                                  item,
+                                  item.taskStatus??"",
                                   style: GoogleFonts.getFont(
                                     'Lato',
                                     textStyle: TextStyle(
@@ -387,9 +388,9 @@ setState(() {
                             )),
                         items: widget.priority
                             .map((item) => DropdownMenuItem<String>(
-                                value: item,
+                                value: item.priority,
                                 child: Text(
-                                  item,
+                                  item.priority??"",
                                   style: GoogleFonts.getFont(
                                     'Lato',
                                     textStyle: TextStyle(

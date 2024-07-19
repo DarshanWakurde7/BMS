@@ -226,7 +226,7 @@ class _MyHomePageState extends State<MyHomePage> {
       sharedPref.setString(
           "product_display_name", loginResponse[0].profilePath.toString());
       sharedPref.setBool("privacy Terms", false);
-      ApiCalls.getStatus(loginResponse[0].accountId!.toString());
+      ApiCalls.getStatus(loginResponse[0].accountId??0);
 
 // ApiCalls.getDataofCards(1.toString());
 
