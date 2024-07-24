@@ -12,13 +12,13 @@ class ViewTaskPage extends StatefulWidget {
 }
 
 class _ViewTaskPageState extends State<ViewTaskPage> {
-  String _statusGroupId = '5'; // Default to 'Complete'
+  String _statusGroupId = '1';
   List<dynamic> _tasks = [];
 
   @override
   void initState() {
     super.initState();
-    _fetchTasks(); // Fetch tasks on initialization
+    _fetchTasks();
   }
 
   Future<void> _fetchTasks() async {
@@ -47,7 +47,7 @@ class _ViewTaskPageState extends State<ViewTaskPage> {
   void _onFilterChanged(String statusGroupId) {
     setState(() {
       _statusGroupId = statusGroupId;
-      _fetchTasks(); // Refetch tasks with the new filter
+      _fetchTasks();
     });
   }
 

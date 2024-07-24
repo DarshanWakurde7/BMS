@@ -1,5 +1,6 @@
 import 'package:bms/ApiCalls/apiCalls.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class WorkFromHomeForm extends StatefulWidget {
   @override
@@ -13,26 +14,46 @@ class _WorkFromHomeFormState extends State<WorkFromHomeForm> {
   String _reason = '';
 
   Future<void> _submitWorkFromHomeRequest() async {
-    final noOfDays = _toDate.difference(_fromDate).inDays + 1;
-    await ApiCalls.addWFH(
-      accountId: "1",
-      employeeId: 1,
-      noOfDays: noOfDays,
-      reason: _reason,
-      dateFrom: '${_fromDate.year}-${_fromDate.month}-${_fromDate.day}',
-      dateTo: '${_toDate.year}-${_toDate.month}-${_toDate.day}',
-      returnToOffice:
-          '${_returnDate.year}-${_returnDate.month}-${_returnDate.day}',
-      createdBy: 1,
-    );
+    try {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? employeeIdStr = prefs.getString('employee_id');
 
-    // Show a snackbar to indicate the request has been submitted
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Work from home request submitted'),
-        backgroundColor: Colors.green,
-      ),
-    );
+      if (employeeIdStr == null) {
+        throw Exception(
+            'Employee ID or User ID not found in SharedPreferences');
+      }
+
+      final int employeeId = int.parse(employeeIdStr);
+
+      final noOfDays = _toDate.difference(_fromDate).inDays + 1;
+
+      await ApiCalls.addWFH(
+        accountId: "1",
+        employeeId: employeeId,
+        noOfDays: noOfDays,
+        reason: _reason,
+        dateFrom: '${_fromDate.year}-${_fromDate.month}-${_fromDate.day}',
+        dateTo: '${_toDate.year}-${_toDate.month}-${_toDate.day}',
+        returnToOffice:
+            '${_returnDate.year}-${_returnDate.month}-${_returnDate.day}',
+        createdBy: employeeId,
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Work from home request submitted'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      print('Error submitting work from home request: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to submit work from home request'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   Future<void> _selectDate(BuildContext context, DateTime initialDate,

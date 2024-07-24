@@ -5,7 +5,7 @@ import 'dart:convert';
 
 import 'package:bms/Screens/LeaveForm.dart';
 import 'package:bms/Screens/WfhForm.dart';
-import 'package:bms/Screens/AttendenceReport.dart';
+import 'package:bms/Screens/AttendenceDetails.dart';
 
 class LeaveTracker extends StatelessWidget {
   @override
@@ -280,7 +280,7 @@ class LeaveCard extends StatelessWidget {
       // },
       child: Container(
         width: 300,
-        height: 200, // Increase the height parameter as needed
+        height: 200,
         child: Card(
           color: Colors.white,
           margin: EdgeInsets.all(8.0),
@@ -604,11 +604,10 @@ class WfhHistoryCard extends StatelessWidget {
               Text('Days: ${wfh.noOfDays.toStringAsFixed(1)}',
                   style: GoogleFonts.lato()),
               Text(
-                'Reason:${wfh.comment}',
+                'Comment:${wfh.comment}',
                 style: GoogleFonts.lato(),
                 textAlign: TextAlign.justify,
-                maxLines:
-                    3, // Set max lines to 3 or remove this line for unlimited lines
+                maxLines: 3,
                 overflow: TextOverflow.ellipsis,
               ),
               Text(

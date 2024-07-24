@@ -3,34 +3,388 @@ import 'package:bms/Screens/Dialogs.dart';
 import 'package:bms/Screens/ViewTask.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class ProjectScreen extends StatelessWidget {
+class ProjectManagementScreen extends StatefulWidget {
+  @override
+  _ProjectManagementScreenState createState() =>
+      _ProjectManagementScreenState();
+}
+
+class _ProjectManagementScreenState extends State<ProjectManagementScreen> {
+  List<dynamic> allProjects = [];
+  List<dynamic> filteredProjects = [];
+  bool isLoading = false;
+  int selectedStatusGroupId = 2;
+  final TextEditingController searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    fetchProjects(selectedStatusGroupId);
+    searchController.addListener(_filterProjects);
+  }
+
+  Future<void> fetchProjects(int statusGroupId) async {
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      List<dynamic> data = await ApiCalls.fetchProjects(statusGroupId);
+      setState(() {
+        allProjects = data;
+        filteredProjects = allProjects;
+        selectedStatusGroupId = statusGroupId;
+      });
+    } catch (e) {
+      print('Failed to load projects: $e');
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  void _filterProjects() {
+    final query = searchController.text.toLowerCase();
+    setState(() {
+      filteredProjects = allProjects.where((project) {
+        return project['project_name']?.toLowerCase().contains(query) ?? false;
+      }).toList();
+    });
+  }
+
+  @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text('Projects'),
-          bottom: TabBar(
-            tabs: [
-              Tab(text: 'Add Project'),
-              Tab(text: 'Show Projects'),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Projects'),
+      ),
+      body: Stack(
+        children: [
+          Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: TextField(
+                  controller: searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Search',
+                    prefixIcon: Icon(Icons.search),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.0),
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      FilterButton(
+                          label: 'Active',
+                          isSelected: selectedStatusGroupId == 2,
+                          onPressed: () => fetchProjects(2)),
+                      FilterButton(
+                          label: 'Hold',
+                          isSelected: selectedStatusGroupId == 3,
+                          onPressed: () => fetchProjects(3)),
+                      FilterButton(
+                          label: 'Review',
+                          isSelected: selectedStatusGroupId == 4,
+                          onPressed: () => fetchProjects(4)),
+                      FilterButton(
+                          label: 'Complete',
+                          isSelected: selectedStatusGroupId == 5,
+                          onPressed: () => fetchProjects(5)),
+                      FilterButton(
+                          label: 'All',
+                          isSelected: selectedStatusGroupId == 7,
+                          onPressed: () => fetchProjects(7)),
+                    ],
+                  ),
+                ),
+              ),
+              isLoading
+                  ? Center(child: CircularProgressIndicator())
+                  : Expanded(
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(8.0),
+                        itemCount: filteredProjects.length,
+                        itemBuilder: (context, index) {
+                          var project = filteredProjects[index];
+                          return ProjectCard(
+                            projectName: project['project_name'] ?? '--',
+                            projectType: project['project_type'] ?? '--',
+                            projectStatus: project['project_status'] ?? '--',
+                            projectOwner:
+                                '${project['created_fname']} ${project['created_lname']}' ??
+                                    '--',
+                            priority: project['priority']?.toString() ?? '--',
+                            estStartDate: project['est_start_date'] ?? '--',
+                            estEndDate: project['est_end_date'] ?? '--',
+                            planStartDate: project['plan_start_date'] ?? '--',
+                            planEndDate: project['plan_end_date'] ?? '--',
+                            actStartDate: project['act_start_date'] ?? '--',
+                            actEndDate: project['act_end_date'] ?? '--',
+                            estEffort:
+                                project['total_est_efforts']?.toString() ??
+                                    '--',
+                            actEffort:
+                                project['total_act_efforts']?.toString() ??
+                                    '--',
+                            finalDeliveryDate:
+                                project['final_delivery_date'] ?? '--',
+                            projectId: project['project_id'] ?? 0,
+                          );
+                        },
+                      ),
+                    ),
             ],
           ),
-        ),
-        body: TabBarView(
-          children: [
-            AddProject(),
-            ProjectManagementScreen(),
-          ],
-        ),
+          Positioned(
+            bottom: 16,
+            right: 16,
+            child: FloatingActionButton(
+              onPressed: () {
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (context) => AddProject()));
+              },
+              child: Icon(Icons.add),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
+class FilterButton extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onPressed;
+
+  FilterButton(
+      {required this.label, required this.isSelected, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          foregroundColor: isSelected ? Colors.white : Colors.blue,
+          backgroundColor: isSelected ? Colors.blue : Colors.white,
+        ),
+        child: Text(label),
+      ),
+    );
+  }
+}
+
+class ProjectCard extends StatelessWidget {
+  final String projectName;
+  final String projectType;
+  final String projectStatus;
+  final String projectOwner;
+  final String priority;
+  final String estStartDate;
+  final String estEndDate;
+  final String planStartDate;
+  final String planEndDate;
+  final String actStartDate;
+  final String actEndDate;
+  final String estEffort;
+  final String actEffort;
+  final String finalDeliveryDate;
+  final int projectId;
+
+  ProjectCard({
+    required this.projectName,
+    required this.projectType,
+    required this.projectStatus,
+    required this.projectOwner,
+    required this.priority,
+    required this.estStartDate,
+    required this.estEndDate,
+    required this.planStartDate,
+    required this.planEndDate,
+    required this.actStartDate,
+    required this.actEndDate,
+    required this.estEffort,
+    required this.actEffort,
+    required this.finalDeliveryDate,
+    required this.projectId,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: Color.fromARGB(255, 206, 236, 255),
+      margin: EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10.0),
+      ),
+      elevation: 4.0,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              projectName,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 8),
+            _buildInfoRow(Icons.code, projectType),
+            _buildInfoRow(Icons.sync, projectStatus),
+            _buildInfoRow(Icons.person, projectOwner),
+            _buildInfoRow(Icons.priority_high, ' $priority'),
+            _buildDateTable(),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                IconButton(
+                  icon: Icon(Icons.add),
+                  onPressed: () {},
+                ),
+                IconButton(
+                  icon: Icon(Icons.hourglass_empty),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (BuildContext context) {
+                          return ViewTaskPage(
+                            projectId: projectId,
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
+                IconButton(
+                  icon: Icon(Icons.comment),
+                  onPressed: () {},
+                ),
+                IconButton(
+                  icon: Icon(Icons.people),
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return EmployeeDialog(
+                          projectId: projectId,
+                        );
+                      },
+                    );
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: Colors.blue),
+          SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(fontSize: 16),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDateTable() {
+    return Table(
+      children: [
+        TableRow(
+          children: [
+            _buildTableHeader('Date Type'),
+            _buildTableHeader('Start Date'),
+            _buildTableHeader('End Date'),
+          ],
+        ),
+        _buildDateTableRow('Estimated', estStartDate, estEndDate),
+        _buildDateTableRow('Planned', planStartDate, planEndDate),
+        _buildDateTableRow('Actual', actStartDate, actEndDate),
+      ],
+    );
+  }
+
+  TableRow _buildDateTableRow(String label, String startDate, String endDate) {
+    return TableRow(
+      children: [
+        _buildTableCell(label),
+        _buildTableCell(startDate),
+        _buildTableCell(endDate),
+      ],
+    );
+  }
+
+  Widget _buildTableHeader(String text) {
+    return Container(
+      padding: const EdgeInsets.all(8.0),
+      color: Color.fromARGB(255, 167, 200, 227),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 14,
+          color: Colors.white,
+        ),
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+
+  Widget _buildTableCell(String text) {
+    return Container(
+      padding: const EdgeInsets.all(8.0),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: Colors.black,
+          ),
+        ),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 14,
+        ),
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 class AddProject extends StatefulWidget {
   @override
   _AddProjectState createState() => _AddProjectState();
@@ -39,12 +393,10 @@ class AddProject extends StatefulWidget {
 class _AddProjectState extends State<AddProject> {
   final _formKey = GlobalKey<FormState>();
 
-  // Controllers for text fields
   final TextEditingController _projectNameController = TextEditingController();
   final TextEditingController _projectCodeController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
 
-  // Variables for dropdowns
   String? _projectType;
   String? _projectOwner;
   String? _customer;
@@ -52,7 +404,6 @@ class _AddProjectState extends State<AddProject> {
   String? _priority;
   int? userId;
 
-  // Date variables
   DateTime esStart = DateTime.now();
   DateTime esEnd = DateTime.now();
   DateTime planStart = DateTime.now();
@@ -170,7 +521,6 @@ class _AddProjectState extends State<AddProject> {
     }
   }
 
-  // Helper function to select date
   Future<void> _selectDate(BuildContext context, DateTime? initialDate,
       Function(DateTime) onDateSelected) async {
     final DateTime? picked = await showDatePicker(
@@ -192,6 +542,9 @@ class _AddProjectState extends State<AddProject> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: Text('Add Projects'),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(10.0),
         child: Form(
@@ -630,457 +983,3 @@ class GetDatePickerState extends State<GetDatePicker> {
     );
   }
 }
-
-class ProjectManagementScreen extends StatefulWidget {
-  @override
-  _ProjectManagementScreenState createState() =>
-      _ProjectManagementScreenState();
-}
-
-class _ProjectManagementScreenState extends State<ProjectManagementScreen> {
-  List<dynamic> allProjects = [];
-  List<dynamic> filteredProjects = [];
-  bool isLoading = false;
-  int selectedStatusGroupId = 2;
-  final TextEditingController searchController = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    fetchProjects(selectedStatusGroupId);
-    searchController.addListener(_filterProjects);
-  }
-
-  Future<void> fetchProjects(int statusGroupId) async {
-    setState(() {
-      isLoading = true;
-    });
-
-    try {
-      List<dynamic> data = await ApiCalls.fetchProjects(statusGroupId);
-      setState(() {
-        allProjects = data;
-        filteredProjects = allProjects;
-        selectedStatusGroupId = statusGroupId;
-      });
-    } catch (e) {
-      print('Failed to load projects: $e');
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
-    }
-  }
-
-  void _filterProjects() {
-    final query = searchController.text.toLowerCase();
-    setState(() {
-      filteredProjects = allProjects.where((project) {
-        return project['project_name']?.toLowerCase().contains(query) ?? false;
-      }).toList();
-    });
-  }
-
-  @override
-  void dispose() {
-    searchController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              controller: searchController,
-              decoration: InputDecoration(
-                hintText: 'Search',
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  FilterButton(
-                      label: 'Active',
-                      isSelected: selectedStatusGroupId == 2,
-                      onPressed: () => fetchProjects(2)),
-                  FilterButton(
-                      label: 'Hold',
-                      isSelected: selectedStatusGroupId == 3,
-                      onPressed: () => fetchProjects(3)),
-                  FilterButton(
-                      label: 'Review',
-                      isSelected: selectedStatusGroupId == 4,
-                      onPressed: () => fetchProjects(4)),
-                  FilterButton(
-                      label: 'Complete',
-                      isSelected: selectedStatusGroupId == 5,
-                      onPressed: () => fetchProjects(5)),
-                  FilterButton(
-                      label: 'All',
-                      isSelected: selectedStatusGroupId == 7,
-                      onPressed: () => fetchProjects(7)),
-                ],
-              ),
-            ),
-          ),
-          isLoading
-              ? Center(child: CircularProgressIndicator())
-              : Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(8.0),
-                    itemCount: filteredProjects.length,
-                    itemBuilder: (context, index) {
-                      var project = filteredProjects[index];
-                      return ProjectCard(
-                        projectName: project['project_name'] ?? '--',
-                        projectType: project['project_type'] ?? '--',
-                        projectStatus: project['project_status'] ?? '--',
-                        projectOwner:
-                            '${project['created_fname']} ${project['created_lname']}' ??
-                                '--',
-                        priority: project['priority']?.toString() ?? '--',
-                        estStartDate: project['est_start_date'] ?? '--',
-                        estEndDate: project['est_end_date'] ?? '--',
-                        planStartDate: project['plan_start_date'] ?? '--',
-                        planEndDate: project['plan_end_date'] ?? '--',
-                        actStartDate: project['act_start_date'] ?? '--',
-                        actEndDate: project['act_end_date'] ?? '--',
-                        estEffort:
-                            project['total_est_efforts']?.toString() ?? '--',
-                        actEffort:
-                            project['total_act_efforts']?.toString() ?? '--',
-                        finalDeliveryDate:
-                            project['final_delivery_date'] ?? '--',
-                        projectId: project['project_id'] ?? 0,
-                      );
-                    },
-                  ),
-                ),
-        ],
-      ),
-    );
-  }
-}
-
-class FilterButton extends StatelessWidget {
-  final String label;
-  final bool isSelected;
-  final VoidCallback onPressed;
-
-  FilterButton(
-      {required this.label, required this.isSelected, required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4.0),
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          foregroundColor: isSelected ? Colors.white : Colors.blue,
-          backgroundColor: isSelected ? Colors.blue : Colors.white,
-        ),
-        child: Text(label),
-      ),
-    );
-  }
-}
-
-class ProjectCard extends StatelessWidget {
-  final String projectName;
-  final String projectType;
-  final String projectStatus;
-  final String projectOwner;
-  final String priority;
-  final String estStartDate;
-  final String estEndDate;
-  final String planStartDate;
-  final String planEndDate;
-  final String actStartDate;
-  final String actEndDate;
-  final String estEffort;
-  final String actEffort;
-  final String finalDeliveryDate;
-  final int projectId; // Add projectId as a parameter
-
-  ProjectCard({
-    required this.projectName,
-    required this.projectType,
-    required this.projectStatus,
-    required this.projectOwner,
-    required this.priority,
-    required this.estStartDate,
-    required this.estEndDate,
-    required this.planStartDate,
-    required this.planEndDate,
-    required this.actStartDate,
-    required this.actEndDate,
-    required this.estEffort,
-    required this.actEffort,
-    required this.finalDeliveryDate,
-    required this.projectId, // Initialize projectId
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      color: Color.fromARGB(255, 206, 236, 255),
-      margin: EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10.0),
-      ),
-      elevation: 4.0,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              projectName,
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 8),
-            _buildInfoRow(Icons.code, projectType),
-            _buildInfoRow(Icons.sync, projectStatus),
-            _buildInfoRow(Icons.person, projectOwner),
-            _buildInfoRow(Icons.priority_high, ' $priority'),
-            _buildDateTable(),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                IconButton(
-                  icon: Icon(Icons.add),
-                  onPressed: () {},
-                ),
-                IconButton(
-                  icon: Icon(Icons.hourglass_empty),
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (BuildContext context) {
-                        return ViewTaskPage(
-                          projectId: projectId,
-                        );
-                      },
-                    );
-                  },
-                ),
-                IconButton(
-                  icon: Icon(Icons.comment),
-                  onPressed: () {},
-                ),
-                IconButton(
-                  icon: Icon(Icons.people),
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (BuildContext context) {
-                        return EmployeeDialog(
-                          projectId:
-                              projectId, // Pass projectId to EmployeeDialog
-                        );
-                      },
-                    );
-                  },
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(IconData icon, String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        children: [
-          Icon(icon, size: 16, color: Colors.blue),
-          SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              text,
-              style: TextStyle(fontSize: 16),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDateTable() {
-    return Table(
-      children: [
-        TableRow(
-          children: [
-            _buildTableHeader('Date Type'),
-            _buildTableHeader('Start Date'),
-            _buildTableHeader('End Date'),
-          ],
-        ),
-        _buildDateTableRow('Estimated', estStartDate, estEndDate),
-        _buildDateTableRow('Planned', planStartDate, planEndDate),
-        _buildDateTableRow('Actual', actStartDate, actEndDate),
-      ],
-    );
-  }
-
-  TableRow _buildDateTableRow(String label, String startDate, String endDate) {
-    return TableRow(
-      children: [
-        _buildTableCell(label),
-        _buildTableCell(startDate),
-        _buildTableCell(endDate),
-      ],
-    );
-  }
-
-  Widget _buildTableHeader(String text) {
-    return Container(
-      padding: const EdgeInsets.all(8.0),
-      color: Color.fromARGB(255, 167, 200, 227),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: 14,
-          color: Colors.white,
-        ),
-        textAlign: TextAlign.center,
-      ),
-    );
-  }
-
-  Widget _buildTableCell(String text) {
-    return Container(
-      padding: const EdgeInsets.all(8.0),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: Colors.black,
-          ),
-        ),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 14,
-        ),
-        textAlign: TextAlign.center,
-      ),
-    );
-  }
-}
-
-// class EmployeeDialog extends StatelessWidget {
-//   @override
-//   Widget build(BuildContext context) {
-//     return Dialog(
-//       shape: RoundedRectangleBorder(
-//         borderRadius: BorderRadius.circular(12.0),
-//       ),
-//       child: Container(
-//         width: MediaQuery.of(context).size.width * 0.9,
-//         height: MediaQuery.of(context).size.height * 0.7,
-//         padding: EdgeInsets.all(8.0),
-//         child: Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             DropdownButtonFormField<String>(
-//               hint: Text('Select Employee'),
-//               items: <String>['Employee 1', 'Employee 2', 'Employee 3']
-//                   .map((String value) {
-//                 return DropdownMenuItem<String>(
-//                   value: value,
-//                   child: Text(value, style: TextStyle(fontSize: 14)),
-//                 );
-//               }).toList(),
-//               onChanged: (String? value) {
-//                 // Handle dropdown value change
-//               },
-//               decoration: InputDecoration(
-//                 border: OutlineInputBorder(),
-//                 contentPadding:
-//                     EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-//               ),
-//             ),
-//             SizedBox(height: 10),
-//             // Divider(height: 10, color: Colors.grey),
-//             Text(
-//               'Employee List:',
-//               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-//             ),
-//             SizedBox(height: 10),
-//             Expanded(
-//               child: DataTable(
-//                 columnSpacing: 10,
-//                 headingRowHeight: 32,
-//                 dataRowHeight: 32,
-//                 columns: [
-//                   DataColumn(
-//                       label: Text('Name', style: TextStyle(fontSize: 14))),
-//                   DataColumn(
-//                       label: Text('Position', style: TextStyle(fontSize: 14))),
-//                   DataColumn(
-//                       label: Text('Status', style: TextStyle(fontSize: 14))),
-//                   DataColumn(
-//                       label: Text('Actions', style: TextStyle(fontSize: 14))),
-//                 ],
-//                 rows: [
-//                   DataRow(cells: [
-//                     DataCell(Text('Shreyas Kulkarni',
-//                         style: TextStyle(fontSize: 12))),
-//                     DataCell(Text('Software Developer',
-//                         style: TextStyle(fontSize: 12))),
-//                     DataCell(Text('Active', style: TextStyle(fontSize: 12))),
-//                     DataCell(
-//                       Row(
-//                         children: [
-//                           IconButton(
-//                             icon: Icon(Icons.delete, size: 16),
-//                             onPressed: () {
-//                               // Handle delete action
-//                             },
-//                           ),
-//                         ],
-//                       ),
-//                     ),
-//                   ]),
-//                   // Add more DataRow widgets as needed
-//                 ],
-//               ),
-//             ),
-//             SizedBox(height: 10),
-//             Row(
-//               mainAxisAlignment: MainAxisAlignment.end,
-//               children: [
-//                 ElevatedButton(
-//                   onPressed: () {
-//                     // Handle add button action
-//                   },
-//                   child: Text('Add', style: TextStyle(fontSize: 14)),
-//                 ),
-//               ],
-//             ),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-// }
