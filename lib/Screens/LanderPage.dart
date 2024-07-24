@@ -58,7 +58,7 @@ class LanderPageState extends State<LanderPage>
     onChange: (value) {
       final displayTime =
           StopWatchTimer.getDisplayTime(value, milliSecond: false);
-      print('Display Time: $displayTime');
+     
     },
   );
 
@@ -271,10 +271,10 @@ class LanderPageState extends State<LanderPage>
   late TabController tabController;
   @override
   void initState() {
+      fetchAttendanceData();
     startPolling();
     getPunched();
     ApiCalls.getDataofCards(1.toString());
-
     dataOfCards;
     _determinePosition();
     tabController = TabController(length: 7, vsync: this, initialIndex: 0);
@@ -369,6 +369,7 @@ class LanderPageState extends State<LanderPage>
   }
 
   Future<Map<String, dynamic>?> fetchAttendanceData() async {
+   
     try {
       final pref = await SharedPreferences.getInstance();
 
@@ -386,8 +387,9 @@ class LanderPageState extends State<LanderPage>
       if (responseAttendance.statusCode == 200) {
         var data = jsonDecode(responseAttendance.body);
 
-        if (pref.getString("chekinTime") != null && data['punch_status'] == 0) {
-          String checkinTimeString = pref.getString("chekinTime")!;
+        if (data['punch_status'] == 0) {
+          print(data["data"].last["time"]);
+          String checkinTimeString = (data["data"].last["time"]);
           DateTime checkinTime = DateTime(
             DateTime.now().year,
             DateTime.now().month,
@@ -424,16 +426,17 @@ class LanderPageState extends State<LanderPage>
   }
 
   Future<void> handlePunchInOut() async {
+
+
     try {
       final pref = await SharedPreferences.getInstance();
-
-      Uri url = Uri.parse(
-          'https://portalwiz.net/laravelapi/public/api/add_attendance?');
+print("${pref.getInt("punch_Status")}" +"Staus Here");
+      Uri url = Uri.parse('https://portalwiz.net/laravelapi/public/api/add_attendance?');
 
       var payload = {
         "account_id": pref.getInt('account_id').toString(),
         "user_id": pref.getInt('user_id').toString(),
-        "punch_status": pref.getInt('punch_Status').toString()
+        "punch_status": "${pref.getInt('punch_Status')??0}"
       };
 
       final response = await http.post(url, body: payload);
@@ -576,12 +579,16 @@ class LanderPageState extends State<LanderPage>
                                   }
 
                                   if (checkLocation) {
+
+
                                     await handlePunchInOut();
                                     setState(() {
                                       punch_Status = punch_Status.isEmpty
                                           ? "Checked In"
                                           : "";
                                     });
+                                    
+     
                                   } else {
                                     _determinePosition();
                                     print("Sorry");
@@ -680,7 +687,7 @@ class LanderPageState extends State<LanderPage>
             ),
 
             Visibility(
-              // visible: (roleid==1),
+              visible: (roleid==1),
               child: ListTile(
                 title: const Text("PM Sheet"),
                 leading: const Icon(Icons.manage_search),
@@ -735,17 +742,20 @@ class LanderPageState extends State<LanderPage>
                     MaterialPageRoute(builder: (context) => MyEnquire()));
               },
             ),
-            ListTile(
-              title: const Text("Leave Tracker "),
-              leading: const Icon(Icons.work),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(context,
-                    MaterialPageRoute(builder: (context) => LeaveTracker()));
-              },
+            Visibility(
+               visible: (roleid==1),
+              child: ListTile(
+                title: const Text("Leave Requests "),
+                leading: const Icon(Icons.work),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (context) => LeaveTracker()));
+                },
+              ),
             ),
             ListTile(
-              title: const Text("Leave Requests "),
+              title: const Text("Leave Tracker "),
               leading: const Icon(Icons.work),
               onTap: () {
                 Navigator.pop(context);

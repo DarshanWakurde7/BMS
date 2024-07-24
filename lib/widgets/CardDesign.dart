@@ -4,10 +4,13 @@ import 'package:bms/Screens/Comment.dart';
 import 'package:bms/Screens/TimeSheet.dart';
 import 'package:bms/Screens/addTaskPage.dart';
 import 'package:bms/ApiCalls/apiCalls.dart';
+import 'package:bms/pojos/models/PriorityDropdown.dart';
+import 'package:bms/pojos/models/TaskStatusDropdown.dart';
 import 'package:flutter/cupertino.dart';
 import "package:bms/pojos/models/TaskStatusDropdown.dart";
 import "package:bms/pojos/models/PriorityDropdown.dart";
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -49,7 +52,7 @@ class _myCards1State extends State<myCards1> {
   var review = TextEditingController();
   var comment = TextEditingController();
   DateTime todays = DateTime.now();
-
+  bool isLoading=false;
   String Status = "Status";
   String priority = "Priority";
   int role_id=0;
@@ -664,7 +667,7 @@ setState(() {
                   // Text('Add Time',style: TextStyle(fontWeight: FontWeight.w600,color: Colors.blueAccent), // )
 
                   ),
-            (role_id==1)?  PopupMenuButton<PopupMenu>(
+            (true)?  PopupMenuButton<PopupMenu>(
                   surfaceTintColor: Colors.white,
                   icon: const Icon(
                     Icons.select_all,
@@ -841,197 +844,222 @@ setState(() {
   }
 
   void getTimeSheetData() {
-    showDialog(
-      context: context,
-      builder: (context) {
+   showDialog(
+  context: context,
+  builder: (context) {
+    return StatefulBuilder(
+      builder: (context, setState) {
         return Dialog(
           child: Container(
-            width: MediaQuery.of(context).size.width * 0.95, // Increased width
-            height: MediaQuery.of(context).size.height * 0.5,
-            child: Scaffold(
-              appBar: AppBar(
-                backgroundColor: Colors.blueAccent.shade100,
-                title: const Text(
-                  "Add Time",
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w300),
-                ),
-                centerTitle: true,
-              ),
-              body: SingleChildScrollView(
-                keyboardDismissBehavior:
-                    ScrollViewKeyboardDismissBehavior.onDrag,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    SizedBox(height: 20),
-                    Padding(
-                      padding: EdgeInsets.fromLTRB(20, 2, 20, 2),
-                      child: Table(
-                        columnWidths: {0: FlexColumnWidth(2)},
-                        border: const TableBorder(
-                          horizontalInside:
-                              BorderSide(color: Colors.blueAccent),
+            width: MediaQuery.of(context).size.width * 0.95,
+            height: MediaQuery.of(context).size.height * 0.39,
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(16)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                SizedBox(height: 20),
+                Padding(
+                  padding: EdgeInsets.fromLTRB(15, 2, 20, 2),
+                  child: Row(
+                    children: [
+                      Icon(Icons.calendar_month, size: 16),
+                      SizedBox(width: 4),
+                      Text(
+                        "${timesheetdate.year}-${timesheetdate.month}-${timesheetdate.day}",
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade600,
                         ),
-                        children: [
-                          TableRow(children: [
-                            Text(
-                              "Date",
-                              style: TextStyle(fontSize: 17),
-                            ),
-                            Row(
-                              children: [
-                                Icon(Icons.calendar_month, size: 16),
-                                SizedBox(width: 8),
-                                GetDatePicker(
-                                  getselectedate: todays,
-                                  getexacttime: (date) {
-                                    setState(() {
-                                      timesheetdate = date;
-                                    });
-                                  },
-                                ),
-                              ],
-                            ),
-                          ]),
-                          TableRow(children: [
-                            Text(
-                              "Start Time",
-                              style: TextStyle(fontSize: 17),
-                            ),
-                            Row(
-                              children: [
-                                Icon(Icons.schedule_outlined, size: 17),
-                                SizedBox(width: 3),
-                                GetTime(
-                                  getselected: (p0) {
-                                    setState(() {
-                                      mynew = p0;
-                                    });
-                                  },
-                                ),
-                              ],
-                            ),
-                          ]),
-                          TableRow(children: [
-                            Text(
-                              "End Time",
-                              style: TextStyle(fontSize: 17),
-                            ),
-                            Row(
-                              children: [
-                                Icon(Icons.schedule_outlined, size: 17),
-                                SizedBox(width: 3),
-                                GetTime(
-                                  getselected: (p0) {
-                                    setState(() {
-                                      mynew1 = p0;
-                                    });
-                                  },
-                                ),
-                              ],
-                            ),
-                          ]),
-                        ],
                       ),
-                    ),
-                    Container(
-                      margin: const EdgeInsets.fromLTRB(20, 5, 15, 5),
-                      child: Row(
-                        children: [
-                          Text(
-                            "Review: ",
-                            style: TextStyle(fontSize: 18),
-                          ),
-                          Flexible(
-                            child: TextField(
-                              controller: review,
-                              keyboardType: TextInputType.number,
-                              decoration: InputDecoration(
-                                contentPadding: EdgeInsets.zero,
-                                isDense: true,
-                              ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 15.0, vertical: 10),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          widget.description,
+                          style: GoogleFonts.getFont(
+                            'Lato',
+                            textStyle: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      margin: const EdgeInsets.fromLTRB(15, 5, 15, 5),
-                      child: Row(
+                        ),
+                      )
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 15.0),
+                  child: Table(
+                    textBaseline: TextBaseline.ideographic,
+                    defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                    children: [
+                      TableRow(
                         children: [
-                          Flexible(
-                            child: TextFormField(
-                              decoration: InputDecoration(
-                                labelText: "Comment",
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                              controller: comment,
-                              minLines: 5, // any number you need
-                              maxLines: null,
-                              keyboardType: TextInputType.multiline,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: MediaQuery.of(context).size.height * 0.01),
-                    Align(
-                      alignment: Alignment.bottomRight,
-                      child: Container(
-                        margin: EdgeInsets.fromLTRB(0, 0, 10, 0),
-                        width: MediaQuery.of(context).size.width * 0.4,
-                        height: MediaQuery.of(context).size.height * 0.04,
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            // Add timesheet logic
-                            print(todays);
-                            await ApiCalls.addTimeSheetOfProject(
-                              dataOfCards[widget.index].projectTaskId ?? 0,
-                              dataOfCards[widget.index].accountId ?? 0,
-                              dataOfCards[widget.index].projectId ?? 0,
-                              dataOfCards[widget.index].actStartDate ??
-                                  "00/00/0000",
-                              dataOfCards[widget.index].actEndDate ??
-                                  "00/00/0000",
-                              dataOfCards[widget.index].taskStatus ?? 0,
-                              dataOfCards[widget.index].priorityId ?? 0,
-                              dataOfCards[widget.index].assingedTo ?? 0,
-                              dataOfCards[widget.index].createdBy ?? 0,
-                              dataOfCards[widget.index].taskDesc ?? "",
-                              "${timesheetdate.year}/${timesheetdate.month}/${timesheetdate.day}",
-                              comment.text.toString(),
-                              mynew!.format(context),
-                              mynew1!.format(context),
-                            );
-
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Timesheet added successfully'),
-                                duration: Duration(seconds: 2),
-                              ),
-                            );
-                          },
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                          Row(
                             children: [
-                              Icon(Icons.local_post_office),
-                              SizedBox(width: 10),
-                              Text("Submit"),
+                              Text(
+                                "Start",
+                                style: TextStyle(fontSize: 14),
+                              ),
+                              SizedBox(width: 5),
+                              GetTime(
+                                getselected: (p0) {
+                                  setState(() {
+                                    mynew = p0;
+                                  });
+                                },
+                              ),
                             ],
                           ),
+                          Row(
+                            children: [
+                              Text(
+                                "End",
+                                style: TextStyle(fontSize: 14),
+                              ),
+                              SizedBox(width: 5),
+                              GetTime(
+                                getselected: (p0) {
+                                  setState(() {
+                                    mynew1 = p0;
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      TableRow(
+                        children: [
+                          Container(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 10.0),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "Review: ",
+                                    style: TextStyle(fontSize: 14),
+                                  ),
+                                  Container(
+                                    width: 50,
+                                    child: TextField(
+                                      controller: review,
+                                      keyboardType: TextInputType.number,
+                                      decoration: InputDecoration(
+                                        contentPadding: EdgeInsets.zero,
+                                        isDense: true,
+                                        border: OutlineInputBorder(),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 10.0),
+                            child: Row(
+                              children: [
+                                Text("Total Hrs:"),
+                                SizedBox(width: 5),
+                                Text("8"),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  margin: EdgeInsets.all(10),
+                  child: Row(
+                    children: [
+                      Flexible(
+                        child: TextFormField(
+                          decoration: InputDecoration(
+                            labelText: "Comment",
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          controller: comment,
+                          minLines: 2,
+                          maxLines: null,
+                          keyboardType: TextInputType.multiline,
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+                SizedBox(height: MediaQuery.of(context).size.height * 0.01),
+                Align(
+                  alignment: Alignment.bottomRight,
+                  child: Container(
+                    margin: EdgeInsets.fromLTRB(0, 0, 10, 0),
+                    width: MediaQuery.of(context).size.width * 0.4,
+                    height: MediaQuery.of(context).size.height * 0.04,
+                    child: isLoading
+                        ? Center(child: CircularProgressIndicator())
+                        : ElevatedButton(
+                            onPressed: () async {
+                              setState(() {
+                                isLoading = true;
+                              });
+                              bool response = await ApiCalls.addTimeSheetOfProject(
+                                dataOfCards[widget.index].projectTaskId ?? 0,
+                                dataOfCards[widget.index].accountId ?? 0,
+                                dataOfCards[widget.index].projectId ?? 0,
+                                dataOfCards[widget.index].actStartDate ?? "00/00/0000",
+                                dataOfCards[widget.index].actEndDate ?? "00/00/0000",
+                                dataOfCards[widget.index].taskStatus ?? 0,
+                                dataOfCards[widget.index].priorityId ?? 0,
+                                dataOfCards[widget.index].assingedTo ?? 0,
+                                dataOfCards[widget.index].createdBy ?? 0,
+                                dataOfCards[widget.index].taskDesc ?? "",
+                                "${timesheetdate.year}/${timesheetdate.month}/${timesheetdate.day}",
+                                comment.text.toString(),
+                                mynew!.format(context),
+                                mynew1!.format(context),
+                              );
+                              setState(() {
+                                isLoading = !response;
+                              });
+
+                              review.clear();
+                              comment.clear();
+
+                              if(response){
+
+                                setState(() {
+                                   isLoading = false;
+                                });
+
+                                Navigator.pop(context);
+                             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Time Sheet Updated",style: TextStyle(color: Colors.white,),),backgroundColor: Colors.transparent,));
+                              }
+                            },
+                            child: Text("Submit"),
+                          ),
+                  ),
+                ),
+              ],
             ),
           ),
         );
       },
     );
+  },
+);
+
   }
 }
 

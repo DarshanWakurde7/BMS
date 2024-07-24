@@ -81,7 +81,7 @@ void getApiCallsActive()async{
                           super.setState(fn);
                         }
                       
-                            return myCards1(Title: dataOfCards[index].projectName??"Project Name Here",taskTypeName: dataOfCards[index].taskTypeName??"Noraml", description: dataOfCards[index].taskName??"Task Name", mydata: mydata, colab: dataOfCards[index].collaborators??[],priority: myprority, plandate: dataOfCards[index].planStartDate??"00-00-0000", todate: dataOfCards[index].planEndDate??"00-00-0000", assigne: dataOfCards[index].assingedName??"Donald Trumph",index: index,isFocused: dataOfCards[index].focus??false,data: dataOfCards[index],refresh: (){
+                            return myCards1(Title: dataOfCards[index].projectName??"Project Name Here",taskTypeName: dataOfCards[index].taskTypeName??"Noraml", description: dataOfCards[index].taskName??"Task Name", mydata: myStatus, colab: dataOfCards[index].collaborators??[],priority: myprority, plandate: dataOfCards[index].planStartDate??"00-00-0000", todate: dataOfCards[index].planEndDate??"00-00-0000", assigne: dataOfCards[index].assingedName??"Donald Trumph",index: index,isFocused: dataOfCards[index].focus??false,data: dataOfCards[index],refresh: (){
                               getApiCallsActive();
                             },);
                       

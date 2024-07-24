@@ -215,7 +215,7 @@ class _MyHomePageState extends State<MyHomePage> {
       sharedPref.setInt("account_id", loginResponse[0].accountId!);
       sharedPref.setInt("role_id", loginResponse[0].roleId!);
       sharedPref.setString(
-          "user_email", loginResponse[0].profilePath.toString());
+          "user_email", loginResponse[0].userEmail.toString());
       sharedPref.setString("username", loginResponse[0].profilePath.toString());
       sharedPref.setString(
           "user_full_name", loginResponse[0].profilePath.toString());

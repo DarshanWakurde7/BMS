@@ -20,11 +20,12 @@ class _AddPlanUserState extends State<AddPlanUser> {
   TextEditingController _entryController = TextEditingController();
   bool _isPlanCompleted = false;
   List<Map<String, dynamic>> _employeeList = [];
-
+  List<dynamic> _teamsList = [];
+    int? _selectedTeam;
   @override
   void initState() {
     super.initState();
-   
+   fetchTeams();
   }
 
 
@@ -42,6 +43,8 @@ class _AddPlanUserState extends State<AddPlanUser> {
       "plan_name": _entryController.text,
       "achievements": "",
       "comments": "",
+      "team_id":"$_selectedTeam"
+      
     };
       print(requestBody);
     try {
@@ -64,6 +67,39 @@ class _AddPlanUserState extends State<AddPlanUser> {
       );
     }
     
+  }
+
+
+
+
+
+
+  Future<void> fetchTeams() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    int? userId = prefs.getInt('user_id') ?? 0;
+
+    if (userId != null) {
+      try {
+        final response = await http.post(
+          Uri.parse('https://pw-bms-dev.portalwiz.in/laravelapi/public/api/fetch_teams'),
+          body: {"user_id": "$userId", "role_id": "${prefs.getInt("role_id")}"},
+        );
+        print(response.body);
+
+        if (response.statusCode == 200) {
+          final List<dynamic> teamsData = jsonDecode(response.body);
+          setState(() {
+            _teamsList = teamsData;
+          });
+        } else {
+          print('Failed to fetch teams. Status code: ${response.statusCode}');
+        }
+      } catch (e) {
+        print('Error fetching teams: $e');
+      }
+    } else {
+      print('User ID not found in SharedPreferences');
+    }
   }
 
   @override
@@ -127,7 +163,7 @@ class _AddPlanUserState extends State<AddPlanUser> {
                             DateTime? pickedDate = await showDatePicker(
                               context: context,
                               initialDate: _selectedDate,
-                              firstDate: DateTime(2000),
+                              firstDate: DateTime.now(),
                               lastDate: DateTime(2101),
                             );
                             if (pickedDate != null &&
@@ -161,6 +197,33 @@ class _AddPlanUserState extends State<AddPlanUser> {
                       ],
                     ),
                     SizedBox(height: 16.0),
+
+                      DropdownButtonFormField<int>(
+                      decoration: InputDecoration(
+                        labelText: 'Select Team',
+                        labelStyle: TextStyle(fontSize: 14),
+                        contentPadding: EdgeInsets.symmetric(vertical: 0.0, horizontal: 8.0),
+                        isDense: true,
+                      ),
+                      value: _selectedTeam,
+                      onChanged: (int? newValue) {
+                        setState(() {
+                          _selectedTeam = newValue;
+                          if (_selectedTeam != null) {
+                            // fetchTeamEmployees(_selectedTeam!); // Fetch employees when team changes
+                          }
+                        });
+                      },
+                      items: _teamsList.map<DropdownMenuItem<int>>((team) {
+                        return DropdownMenuItem<int>(
+                          value: team['team_id'],
+                          child: Text(
+                            team['team_name'],
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        );
+                      }).toList(),
+                    ),
                     // Dropdown Row
                     // Row(
                     //   mainAxisAlignment: MainAxisAlignment.center,

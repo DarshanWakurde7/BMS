@@ -1,6 +1,7 @@
 import 'package:bms/ApiCalls/apiCalls.dart';
 import 'package:bms/Screens/Dialogs.dart';
 import 'package:bms/Screens/ViewTask.dart';
+import 'package:bms/Screens/addTaskPage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -643,7 +644,7 @@ class _ProjectManagementScreenState extends State<ProjectManagementScreen> {
   bool isLoading = false;
   int selectedStatusGroupId = 2;
   final TextEditingController searchController = TextEditingController();
-
+  int accountid=0;
   @override
   void initState() {
     super.initState();
@@ -652,8 +653,10 @@ class _ProjectManagementScreenState extends State<ProjectManagementScreen> {
   }
 
   Future<void> fetchProjects(int statusGroupId) async {
+    SharedPreferences sharedPreferences=await SharedPreferences.getInstance();
     setState(() {
       isLoading = true;
+      accountid=sharedPreferences.getInt("account_id")??0;
     });
 
     try {
@@ -764,6 +767,7 @@ class _ProjectManagementScreenState extends State<ProjectManagementScreen> {
                         finalDeliveryDate:
                             project['final_delivery_date'] ?? '--',
                         projectId: project['project_id'] ?? 0,
+                        accountid: accountid,
                       );
                     },
                   ),
@@ -814,7 +818,7 @@ class ProjectCard extends StatelessWidget {
   final String actEffort;
   final String finalDeliveryDate;
   final int projectId; // Add projectId as a parameter
-
+  final int accountid;
   ProjectCard({
     required this.projectName,
     required this.projectType,
@@ -830,8 +834,12 @@ class ProjectCard extends StatelessWidget {
     required this.estEffort,
     required this.actEffort,
     required this.finalDeliveryDate,
+    required this.accountid,
     required this.projectId, // Initialize projectId
   });
+
+
+  
 
   @override
   Widget build(BuildContext context) {
@@ -863,9 +871,12 @@ class ProjectCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                IconButton(
-                  icon: Icon(Icons.add),
-                  onPressed: () {},
+                GestureDetector(
+                  onTap: ()=>AddTask(title: projectName,accid:accountid ,projecid:projectId ,),
+                  child: IconButton(
+                    icon: Icon(Icons.add),
+                    onPressed: () {},
+                  ),
                 ),
                 IconButton(
                   icon: Icon(Icons.hourglass_empty),

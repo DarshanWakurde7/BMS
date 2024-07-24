@@ -3,18 +3,20 @@ import 'package:bms/ApiCalls/apiCalls.dart';
 import 'package:bms/Screens/AddplanUser.dart';
 import 'package:bms/Screens/Pmsheet.dart';
 import 'package:date_picker_timeline/date_picker_timeline.dart';
-
 import 'package:bms/pojos/models/DailyTaskListpojo.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
+import 'package:multi_dropdown/models/value_item.dart';
+import 'package:multi_dropdown/multiselect_dropdown.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
+import 'animated_search_bar.dart';
 
-List<todolistpojo> listdata = [];
+List<todolistpojo> listData = [];
+List<todolistpojo> filteredList = [];
 
 class DailyTasks extends StatefulWidget {
-
   const DailyTasks({super.key, required this.title});
   final String title;
 
@@ -25,46 +27,157 @@ class DailyTasks extends StatefulWidget {
 class _DailyTasksState extends State<DailyTasks> {
   DateTime _selectedValue = DateTime.now();
   bool isLoading = true;
+  String valueofTeam="Select Team";
+  bool openIt = false;
   String? errorMessage;
-  var achivments=TextEditingController();
-  var comments=TextEditingController();
-int roleid=0;
+  var achievementss = TextEditingController();
+  var comments = TextEditingController();
+  int roleId = 0;
+  List<dynamic> _teamsList = [];
+  List<dynamic> _employeeList = [];
+  int? _selectedTeam;
+  List<ValueItem<dynamic>>? _selectedEmployee;
+  final searchController = TextEditingController();
+ DatePickerController _dateController = DatePickerController();
   @override
   void initState() {
     super.initState();
+    fetchTeams();
     listTodo();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Animate to the selected date after the frame is rendered
+      _dateController.animateToDate(_selectedValue);
+    });
   }
 
   Future<void> listTodo() async {
     try {
       SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
-      setState(() {
-        roleid=sharedPreferences.getInt("role_id")??0;
-      });
-      var url = Uri.parse('https://pw-bms-dev.portalwiz.in/laravelapi/public/api/fetch_daily_plan');
-      final response = await http.post(url, body: {
-        "user_id": "${sharedPreferences.getInt("user_id")}",
-        "role_id": "${sharedPreferences.getInt("role_id")}",
-        "plan_date": "${_selectedValue.year}-${_selectedValue.month}-${_selectedValue.day}"
-      });
+  
+      final Map<String, dynamic> requestBody = {
+    "plan_date": "${_selectedValue.year}-${_selectedValue.month.toString().padLeft(2, '0')}-${_selectedValue.day.toString().padLeft(2, '0')}",
+  "user_id":[
+  ...(_selectedEmployee == null 
+      ? [sharedPreferences.getInt("user_id") ?? 0] // Provide a default value if null
+      : _selectedEmployee!.map((e) => e.value).toList())
+],
+    "team_id":_selectedTeam.isNull?null:[_selectedTeam], // Replace with actual team IDs if needed
+    "role_id": "${sharedPreferences.getInt("role_id")}",
+  };
+
+print(requestBody);
+  // Prepare the URL
+  var url = Uri.parse('https://pw-bms-dev.portalwiz.in/laravelapi/public/api/fetch_daily_plan');
+
+  // Perform the POST request
+  final response = await http.post(
+    url,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: jsonEncode(requestBody),
+  );
+
+  print(response.body);
 
       if (response.statusCode == 200) {
         var data = jsonDecode(response.body.toString());
-        setState(() {
-          listdata = List<todolistpojo>.from(data.map((i) => todolistpojo.fromJson(i)));
-          isLoading = false;
-        });
+        if (mounted) {
+          setState(() {
+            roleId=sharedPreferences.getInt("role_id")??0;
+            listData = List<todolistpojo>.from(data.map((i) => todolistpojo.fromJson(i)));
+            filteredList = listData;
+            isLoading = false;
+          });
+        }
       } else {
-        setState(() {
-          isLoading = false;
-          errorMessage = "Failed to load tasks. Please try again later.";
-        });
+        if (mounted) {
+          setState(() {
+            isLoading = false;
+            errorMessage = "Failed to load tasks. Please try again later.";
+          });
+        }
       }
     } catch (e) {
-      setState(() {
-        isLoading = false;
-        errorMessage = "An error occurred: $e";
-      });
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+          errorMessage = "An error occurred: $e";
+        });
+      }
+    }
+  }
+
+ Future<bool> fetchTeamEmployees(int teamId) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    try {
+      var url = Uri.parse('https://pw-bms-dev.portalwiz.in/laravelapi/public/api/fetch_team_employee');
+
+      // API request
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          "team_id": [teamId],
+          "account_id": "${prefs.getInt("account_id")}",
+          "user_id":["${prefs.getInt("user_id")}"]
+        }),
+      );
+    
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        List<Map<String, dynamic>> employees = List<Map<String, dynamic>>.from(data);
+        
+        if (mounted) {
+          setState(() {
+            _employeeList = jsonDecode(response.body);
+       
+          });
+
+         
+      
+        }
+        return true;
+      } else {
+        print('Failed to fetch employees. Status code: ${response.statusCode}');
+        return false;
+      }
+    } catch (e) {
+      print('Error fetching employees: $e');
+      return false;
+    }
+  }
+
+  Future<void> fetchTeams() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    int? userId = prefs.getInt('user_id') ?? 0;
+
+    if (!(userId == null)) {
+      try {
+        final response = await http.post(
+          Uri.parse('https://pw-bms-dev.portalwiz.in/laravelapi/public/api/fetch_teams'),
+          body: {"user_id": "$userId", "role_id": "${prefs.getInt("role_id")}"},
+        );
+        print({"user_id": "$userId", "role_id": "${prefs.getInt("role_id")}"});
+
+        if (response.statusCode == 200) {
+          final List<dynamic> teamsData = jsonDecode(response.body);
+          if (mounted) {
+            setState(() {
+              _teamsList = teamsData;
+            });
+          }
+        } else {
+          print('Failed to fetch teams. Status code: ${response.statusCode}');
+        }
+      } catch (e) {
+        print('Error fetching teams: $e');
+      }
+    } else {
+      print('User ID not found in SharedPreferences');
     }
   }
 
@@ -74,309 +187,384 @@ int roleid=0;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Daily Tasks"),
+        title: const Text("Daily Plans"),
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        scrollDirection: Axis.vertical,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              height: MediaQuery.of(context).size.height * 0.12,
-              child: DatePicker(
-                DateTime.now().subtract(Duration(days: 10)), // Arbitrary past date to allow selection of past dates
-                initialSelectedDate: _selectedValue,
-                selectionColor: Colors.blueAccent.shade100,
-                selectedTextColor: Colors.white,
-                onDateChange: (date) {
-                  setState(() {
-                    _selectedValue = date;
-                    isLoading = true;
-                    errorMessage = null;
-                  });
-                  listTodo();
-                },
-              ),
+      body: Column(
+        children: [
+          Container(
+             
+            height: MediaQuery.of(context).size.height * 0.11,
+            child: DatePicker(
+              height: MediaQuery.of(context).size.height * 0.06,
+              DateTime.now().subtract(Duration(days: 10)),
+              initialSelectedDate: _selectedValue,
+              controller: _dateController,
+              selectionColor: Colors.blueAccent.shade100,
+              selectedTextColor: Colors.white,
+              onDateChange: (date) {
+                setState(() {
+                  _selectedValue = date;
+                  isLoading = true;
+                  errorMessage = null;
+                });
+                listTodo();
+              },
             ),
-            SizedBox(height: 10),
-            Padding(
-              padding: EdgeInsets.only(top: 8, left: 15),
-              child: Text(
-                "My Daily Tasks ${_selectedValue.day} $formattedMonth ${_selectedValue.year}",
-                style: TextStyle(color: Colors.grey),
-              ),
+          ),
+          SizedBox(height: 10),
+          Padding(
+            padding: EdgeInsets.only(top: 8, left: 15),
+            child: Text(
+              "My Daily Plan ${_selectedValue.day} $formattedMonth ${_selectedValue.year}",
+              style: TextStyle(color: Colors.grey),
             ),
-            Container(
-              height: MediaQuery.of(context).size.height * 0.72,
-              child: isLoading
-                  ? Center(child: CircularProgressIndicator())
-                  : errorMessage != null
-                      ? Center(child: Text(errorMessage!))
-                      : ListView.builder(
-                          itemCount: listdata.length,
-                          itemBuilder: (context, index) {
-                            return Dismissible(
-                              key: Key(listdata[index].planId.toString()),
-                              background: Container(
-                                color: Colors.redAccent,
-                                child: const Icon(Icons.delete, color: Colors.grey),
-                                alignment: Alignment.centerRight,
-                              ),
-                              direction: DismissDirection.endToStart,
-                              child: Card(
-                                margin: EdgeInsets.all(12),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+               Expanded(
+                 child: DropdownButton<String>(
+                  isExpanded: true,
+                  elevation: 12,
+                  underline: Text(""),
+                  hint: Text(valueofTeam,style: TextStyle(color: Colors.black),textAlign: TextAlign.center,),
+                  
+                    items: _teamsList.map((e) {
+                      return DropdownMenuItem<String>(
+                        value: e["team_name"],
+                        child: Text(e["team_name"]),
+                      );
+                    }).toList(),
+                    onChanged: (String? newValue) async {
+                      var data = _teamsList.firstWhere(
+                        (employee) => employee['team_name'].toString() == newValue,
+                      );
+                      fetchTeamEmployees(data["team_id"]);
+                      setState(() {
+                        _selectedTeam=data["team_id"];
+                        valueofTeam=newValue??"";
+                      });
+                    },
+                               
+                               ),
+               ),
+              Visibility(
+                visible: !(_employeeList.length==0),
+                child: Container(
+                  height: 50,
+                  width: 200,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12)
+                  ),
+                  child: MultiSelectDropDown(
+                    onOptionSelected: (val) {
+                      setState(() {
+                        _selectedEmployee = val;
+                      });
+                      listTodo();
+                    },
+                    options: (_employeeList).map((e) {
+                      return ValueItem<dynamic>(
+                        label: e["first_name"] + " " + e["last_name"],
+                        value: e["user_id"],
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+     Expanded(
+        child: isLoading
+            ? Center(child: CircularProgressIndicator())
+            : (errorMessage != null || filteredList.isEmpty)
+                ? Center(child: Text(errorMessage ?? "No tasks available"))
+                : ListView.builder(
+                    itemCount: filteredList.length,
+                    itemBuilder: (context, index) {
+                      return Dismissible(
+                        key: Key(filteredList[index].planId.toString()),
+                        background: Container(
+                          color: Colors.redAccent,
+                          child: const Icon(Icons.delete, color: Colors.grey),
+                          alignment: Alignment.centerRight,
+                        ),
+                        direction: DismissDirection.endToStart,
+                        child: Card(
+                          margin: EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(top: 10, bottom: 10),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     Padding(
-                                      padding: const EdgeInsets.only(top: 10, bottom: 10),
-                                      child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Padding(
-                                            padding: const EdgeInsets.only(left: 15.0, top: 5),
-                                            child: Text(
-                                              "${listdata[index].planDate}",
-                                              style: TextStyle(
-                                                  color: Colors.grey.shade600,
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 12),
-                                            ),
-                                          ),
-                                          Visibility(
-                                            visible: (listdata[index].status == 1),
-                                            child: Padding(
-                                              padding: const EdgeInsets.only(right: 10.0, top: 5),
-                                              child: Icon(
-                                                Icons.verified_sharp,
-                                                size: 24,
-                                                color: Colors.blueAccent,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8),
+                                      padding: const EdgeInsets.only(left: 15.0, top: 5),
                                       child: Text(
-                                        "${listdata[index].userName}",
+                                        "${filteredList[index].planDate}",
                                         style: TextStyle(
-                                            color: Colors.black,
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.w600),
-                                      ),
-                                    ),
-                                    Container(
-                                      margin: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                      decoration: BoxDecoration(
-                                          border: Border.all(color: Colors.grey.shade400),
-                                          borderRadius: BorderRadius.circular(11)),
-                                      child: Row(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Padding(
-                                            padding: EdgeInsets.all(5),
-                                            child: Text(
-                                              listdata[index].planName.toString(),
-                                              style: TextStyle(color: Colors.black),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    Row(
-                                      children: [
-                                        Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                                          child: Text("Achievements...",
-                                              style: TextStyle(
-                                                  color: Colors.black, fontWeight: FontWeight.w500)),
-                                        ),
-                                        Visibility(
-                                          visible: (listdata[index].achievements.isNull),
-                                          child: GestureDetector(
-                                            onTap: (){
-                                                  showDialog(context: context,builder: (context){
-                                                    return Dialog(
-                                                          child: Container(
-                                                            height: MediaQuery.of(context).size.height*0.4,
-                                                            child: Column(
-                                                              children: [
-                                                                SizedBox(height: 10,),
-                                                                Text("Add Achivements",style: TextStyle(fontSize: 18,fontWeight: FontWeight.w600),),
-                                                             Padding(
-                                                               padding: const EdgeInsets.symmetric(horizontal: 10.0,vertical: 20),
-                                                               child: TextField(
-                                                              
-                                                                controller: achivments,
-                                                                maxLines: 5,
-                                                                decoration: InputDecoration(
-                                                                  hintText: "write here...",
-                                                                  border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(15)))
-                                                                ),
-                                                               ),
-                                                             ),
-
-                                                             ElevatedButton(onPressed: (){
-                                                                  updateplan(listdata[index].planId??0,listdata[index].planDate??"",listdata[index].planName??"",listdata[index].achievements??achivments.text,listdata[index].comments??comments.text);
-                                                             }, child: Text("Add Achivments",style: TextStyle(color: Colors.black,fontWeight: FontWeight.w500),))
-
-                                                              ],
-                                                            ),
-                                                          ),
-                                                    );
-                                                  });
-                                            },
-                                            child: Icon(Icons.add,color: Colors.blueAccent,)))
-                                      ],
-                                    ),
-                                    Container(
-                                      margin: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                      decoration: BoxDecoration(
-                                          border: Border.all(color: Colors.grey.shade400),
-                                          borderRadius: BorderRadius.circular(11)),
-                                      child: Row(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Padding(
-                                            padding: EdgeInsets.all(5),
-                                            child: Text(
-                                              listdata[index].achievements??" ......",
-                                              style: TextStyle(color: Colors.black),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(vertical: 5.0),
-                                      child: Row(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Padding(
-                                            padding: const EdgeInsets.symmetric(horizontal: 12.0,),
-                                            child: Text("Comment:",
-                                                style: TextStyle(
-                                                    color: Colors.black, fontWeight: FontWeight.w600)),
-                                          ),
-                                         ((listdata[index].comments.isNull))?GestureDetector(
-                                          onTap: (){
-                                      
-                                                showDialog(context: context,builder: (context){
-                                                      return Dialog(
-                                                            child: Container(
-                                                              height: MediaQuery.of(context).size.height*0.4,
-                                                              child: Column(
-                                                                children: [
-                                                                  SizedBox(height: 10,),
-                                                                  Text("Add Comment",style: TextStyle(fontSize: 18,fontWeight: FontWeight.w600),),
-                                                               Padding(
-                                                                 padding: const EdgeInsets.symmetric(horizontal: 10.0,vertical: 20),
-                                                                 child: TextField(
-                                                                
-                                                                  controller: comments,
-                                                                  maxLines: 5,
-                                                                  decoration: InputDecoration(
-                                                                    hintText: "write here...",
-                                                                    border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(15)))
-                                                                  ),
-                                                                 ),
-                                                               ),
-                                      
-                                                               ElevatedButton(onPressed: (){
-                                                                    updateplan(listdata[index].planId??0,listdata[index].planDate??"",listdata[index].planName??"",listdata[index].achievements??achivments.text,listdata[index].comments??comments.text);
-                                                               }, child: Text("Add Comment",style: TextStyle(color: Colors.black,fontWeight: FontWeight.w500),))
-                                      
-                                                                ],
-                                                              ),
-                                                            ),
-                                                      );
-                                                    });
-                                      
-                                          },
-                                          child: Icon(Icons.add,color: Colors.blueAccent,)):Expanded(child: Text("${listdata[index].comments}")),
-                                        ],
+                                            color: Colors.grey.shade600,
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 12),
                                       ),
                                     ),
                                     Visibility(
-                                      visible: (roleid==1),
-                                      child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.end,
-                                        children: [
-                                          Padding(
-                                            padding: const EdgeInsets.only(right: 10.0, bottom: 5),
-                                            child: Icon(
-                                              Icons.edit,
-                                              size: 20,
-                                              color: Colors.grey.shade500,
-                                            ),
-                                          ),
-                                        ],
+                                      visible: (filteredList[index].status == 1),
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(right: 10.0, top: 5),
+                                        child: Icon(
+                                          Icons.verified_sharp,
+                                          size: 24,
+                                          color: Colors.blueAccent,
+                                        ),
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
-                            );
-                          },
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8),
+                                child: Text(
+                                  "${filteredList[index].userName}",
+                                  style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                              Container(
+                                
+                                margin: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                decoration: BoxDecoration(
+                             
+                                    borderRadius: BorderRadius.circular(11)),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    CircleAvatar(radius: 7,child: Icon(Icons.check,color: Colors.white,size: 10,),backgroundColor: Colors.green,),
+                                   SizedBox(width: 5,),
+                                    Text(
+                                        filteredList[index].planName.toString(),
+                                        style: TextStyle(color: Colors.black),
+                                      ),
+                                  
+                                  ],
+                                ),
+                              ),
+                              Row(
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                                    child: Text("Achievements...",
+                                        style: TextStyle(
+                                            color: Colors.black, fontWeight: FontWeight.w500)),
+                                  ),
+                                  Visibility(
+                                    visible: (filteredList[index].achievements == null || filteredList[index].achievements!.isEmpty),
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        showDialog(context: context, builder: (context) {
+                                          return Dialog(
+                                            child: Container(
+                                              height: MediaQuery.of(context).size.height * 0.4,
+                                              child: Column(
+                                                children: [
+                                                  SizedBox(height: 10,),
+                                                  Text("Add Achievements", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),),
+                                                  Padding(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 20),
+                                                    child: TextField(
+                                                      controller: achievementss,
+                                                      maxLines: 5,
+                                                      decoration: InputDecoration(
+                                                        hintText: "Write here...",
+                                                        border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(15))),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  ElevatedButton(
+                                                    onPressed: () {
+                                                      updateplan(
+                                                        filteredList[index].planId ?? 0,
+                                                        filteredList[index].planDate ?? "",
+                                                        filteredList[index].planName ?? "",
+                                                        achievementss.text,
+                                                        filteredList[index].comments ?? comments.text,
+                                                        filteredList[index].userId ?? 0,
+                                                        filteredList[index].teamId ?? 0
+                                                      );
+                                                    },
+                                                    child: Text("Add Achievements", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w500),)
+                                                  )
+                                                ],
+                                              ),
+                                            ),
+                                          );
+                                        });
+                                      },
+                                      child: Icon(Icons.add, color: Colors.blueAccent),
+                                    )
+                                  )
+                                ],
+                              ),
+                              Container(
+                                margin: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                decoration: BoxDecoration(
+                                    border: Border.all(color: Colors.grey.shade400),
+                                    borderRadius: BorderRadius.circular(11)),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Padding(
+                                      padding: EdgeInsets.all(5),
+                                      child: Text(
+                                        filteredList[index].achievements ?? " ......",
+                                        style: TextStyle(color: Colors.black),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 5.0),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12.0,),
+                                      child: Text("Comment:",
+                                          style: TextStyle(
+                                              color: Colors.black, fontWeight: FontWeight.w600)),
+                                    ),
+                                    (filteredList[index].comments == null || filteredList[index].comments!.isEmpty)
+                                      ? GestureDetector(
+                                        onTap: () {
+                                          showDialog(context: context, builder: (context) {
+                                            return Dialog(
+                                              child: Container(
+                                                height: MediaQuery.of(context).size.height * 0.4,
+                                                child: Column(
+                                                  children: [
+                                                    SizedBox(height: 10,),
+                                                    Text("Add Comment", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),),
+                                                    Padding(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 20),
+                                                      child: TextField(
+                                                        controller: comments,
+                                                        maxLines: 5,
+                                                        decoration: InputDecoration(
+                                                          hintText: "Write here...",
+                                                          border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(15))),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    ElevatedButton(
+                                                      onPressed: () {
+                                                        updateplan(
+                                                          filteredList[index].planId ?? 0,
+                                                          filteredList[index].planDate ?? "",
+                                                          filteredList[index].planName ?? "",
+                                                          filteredList[index].achievements ?? achievementss.text,
+                                                          comments.text,
+                                                          filteredList[index].userId ?? 0,
+                                                          filteredList[index].teamId ?? 0
+                                                        );
+                                                      },
+                                                      child: Text("Add Comment", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w500),)
+                                                    )
+                                                  ],
+                                                ),
+                                              ),
+                                            );
+                                          });
+                                        },
+                                        child: Icon(Icons.add, color: Colors.blueAccent),
+                                      )
+                                      : Expanded(child: Text("${filteredList[index].comments}")),
+                                  ],
+                                ),
+                              ),
+                              Visibility(
+                                visible: (roleId == 1),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.only(right: 10.0, bottom: 5),
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ProjectManagerSheet(planid: filteredList[index].planId ?? 0,)));
+                                        },
+                                        child: Icon(
+                                          Icons.edit,
+                                          size: 20,
+                                          color: Colors.grey.shade500,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-            ),
-          ],
-        ),
+                      );
+                    },
+                  ),
       ),
+
+        ],
+      ),
+
       floatingActionButton: FloatingActionButton(
-        tooltip: "Add Task",
-        onPressed: () {
-     (roleid==1)?Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ProjectManagerSheet())):    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => AddPlanUser()));
-        },
-        backgroundColor: Colors.blueAccent.shade100,
-        child: const Icon(Icons.add),
-      ),
+        foregroundColor: Colors.blueAccent.shade200,
+        onPressed: (){
+
+         (roleId==1)? Navigator.push(context, MaterialPageRoute(builder: (context)=>ProjectManagerSheet(planid: null))):Navigator.push(context, MaterialPageRoute(builder: (context)=>AddPlanUser()));
+
+      },child: Icon(Icons.add,color: Colors.black,),),
     );
   }
-  void updateplan(int i,String date,String plan_name,String achivmentses,String commentsss)async {
-    SharedPreferences sharedPreferences=await SharedPreferences.getInstance();
+
+void updateplan(int i, String date, String plan_name, String achievements, String commentss, int user_id, int team_id) async {
+    SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
     final requestBody = {
-    "user_id": "${sharedPreferences.getInt("user_id")}",
-    "plan_name": "${plan_name}",
-    "achievements": "${achivmentses}",
-    "comments": "${commentsss}",
-    "plan_id":"${i}",
-    "plan_date": "${date}",
-    "created_by": "${sharedPreferences.getInt("user_id")}",
-};
-      print(requestBody);
+      "user_id": "${user_id}",
+      "plan_name": "${plan_name}",
+      "achievements": "${achievements}",
+      "comments": "${commentss}",
+      "plan_id": "${i}",
+      "plan_date": "${date}",
+      "updated_by": "${sharedPreferences.getInt("user_id")}",
+      "team_id": "$team_id"
+    };
+    print(requestBody);
     try {
       bool success = await ApiCalls.updateDailyplan(requestBody);
       if (success) {
-
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Data inserted successfully.')),
+          SnackBar(content: Text('Data updated successfully.')),
         );
         listTodo();
-
-Navigator.pop(context);
-        achivments.clear();
+        Navigator.pop(context);
+        achievementss.clear();
         comments.clear();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to insert data.')),
+          SnackBar(content: Text('Failed to update data.')),
         );
       }
       print(success);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to insert data: $e')),
+        SnackBar(content: Text('Failed to update data: $e')),
       );
     }
-    
-  
+  }
 
 
-  
+
 }
-}
-
-

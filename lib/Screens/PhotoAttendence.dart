@@ -41,8 +41,37 @@ class _CheckInPageState extends State<CheckInPage>
     _animation = Tween(begin: 0.0, end: 1.0).animate(_controller);
 
     _initializeUser();
+    registerUser();
     _loadState();
   }
+
+
+
+
+Future<bool> registerUser() async {
+
+  SharedPreferences pref=await SharedPreferences.getInstance();
+  final url = Uri.parse('http://91.108.111.222:8000/attendance/register_user/');
+  final headers = {'Content-Type': 'application/json'};
+  final body = jsonEncode({'username': pref.getString("user_email")});
+
+  try {
+    final response = await http.post(url, headers: headers, body: body);
+
+    if (response.statusCode == 200) {
+
+      // Assuming a successful registration returns a 200 status code
+      return jsonDecode(response.body)["status"];
+    } else {
+      // Handle other status codes as needed
+      return false;
+    }
+  } catch (e) {
+    // Handle exceptions like network errors
+    print('Error: $e');
+    return false;
+  }
+}
 
   @override
   void dispose() {
@@ -232,7 +261,7 @@ class _CheckInPageState extends State<CheckInPage>
   }
 
   Future<void> _checkAndShowDialog() async {
-    if (_employeeId == null) {
+    if (!(await registerUser())) {
       showDialog(
         context: context,
         builder: (BuildContext context) {

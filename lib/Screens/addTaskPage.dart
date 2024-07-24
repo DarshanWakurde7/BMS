@@ -1,7 +1,14 @@
+import 'dart:convert';
+
 import 'package:bms/ApiCalls/apiCalls.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
+import 'package:flutter_quill/quill_delta.dart';
+import 'package:get/get.dart';
+import 'package:multi_dropdown/multiselect_dropdown.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AddTask extends StatefulWidget {
   AddTask(
@@ -19,6 +26,7 @@ class AddTask extends StatefulWidget {
 }
 
 class AddTaskState extends State<AddTask> {
+    bool _isLoading = false;
   DateTime esStart = DateTime.now();
   DateTime esEnd = DateTime.now();
   DateTime planStart = DateTime.now();
@@ -34,10 +42,20 @@ class AddTaskState extends State<AddTask> {
   bool getbill = false;
   bool invoiced = false;
   bool focus = false;
+   List<ValueItem<int>> assignedtp = [];
   String Status = "Status";
   String priority = "Priority";
   String category = "Category";
   String task = "task";
+  String assigne = "Assigne";
+  String collaborator = "collaborator";
+  FocusNode esTimeFocusNode = FocusNode();
+  int assingnid=0;
+  int categoryid=0;
+  int priorityid=0;
+  int statusid=0;
+  int taskTypeid=0;
+
 
   FocusNode _unUsedFocusNode = FocusNode();
 
@@ -53,9 +71,17 @@ class AddTaskState extends State<AddTask> {
 
   void getApis() async {
     await ApiCalls.gettaskByUser(widget.accid);
+    await ApiCalls.getCollborators(widget.accid,widget.projecid);
 // await ApiCalls.getUsersByTask(widget.accid,proid);
     await ApiCalls.gettaskCategory(widget.accid);
+    await ApiCalls.getStatus(widget.accid);
   }
+
+
+    String getHtmlFromQuillController(QuillController controller) {
+  final delta = controller.document.toDelta();
+  return deltaToHtml(delta);
+}
 
   @override
   Widget build(BuildContext context) {
@@ -146,22 +172,24 @@ class AddTaskState extends State<AddTask> {
                         ),
                         Expanded(
                           child: TextField(
-                              scrollPhysics: AlwaysScrollableScrollPhysics(),
-                              style: TextStyle(fontSize: 13),
-                              keyboardType: TextInputType.number,
-                              controller: esTime,
-                              decoration: InputDecoration(
-                                isDense: true,
-                                hintText: "0",
-                                hintStyle: TextStyle(fontSize: 13),
-                                border: OutlineInputBorder(
-                                    borderSide: BorderSide(color: Colors.black),
-                                    borderRadius: BorderRadius.circular(7)),
-                                focusedBorder: OutlineInputBorder(
-                                    borderSide:
-                                        BorderSide(color: Colors.blueAccent),
-                                    borderRadius: BorderRadius.circular(7)),
-                              )),
+  focusNode: esTimeFocusNode,
+  style: TextStyle(fontSize: 13),
+  keyboardType: TextInputType.number,
+  controller: esTime,
+  decoration: InputDecoration(
+    isDense: true,
+    hintText: "0",
+    hintStyle: TextStyle(fontSize: 13),
+    border: OutlineInputBorder(
+      borderSide: BorderSide(color: Colors.black),
+      borderRadius: BorderRadius.circular(7)
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderSide: BorderSide(color: Colors.blueAccent),
+      borderRadius: BorderRadius.circular(7)
+    ),
+  ),
+),
                         ),
                         SizedBox(
                           width: MediaQuery.of(context).size.width * 0.15,
@@ -319,9 +347,9 @@ class AddTaskState extends State<AddTask> {
                           )),
                       items: myCategories
                           .map((item) => DropdownMenuItem<String>(
-                                value: item,
+                                value: item.taskCategory??"",
                                 child: Text(
-                                  item,
+                                  item.taskCategory??"",
                                   style: TextStyle(fontSize: 9),
                                 ),
                               ))
@@ -329,6 +357,10 @@ class AddTaskState extends State<AddTask> {
                       onChanged: (item) {
                         setState(() {
                           category = item.toString();
+                           categoryid = myCategories.firstWhere(
+                (employee) => item == (employee.taskCategory??""),
+                
+              ).taskCategoryId??0;
                         });
                         print(item);
                       }),
@@ -360,11 +392,11 @@ class AddTaskState extends State<AddTask> {
                             style: TextStyle(fontSize: 10, color: Colors.black),
                             textAlign: TextAlign.center,
                           )),
-                      items: myCategories
+                      items: myprority
                           .map((item) => DropdownMenuItem<String>(
-                                value: item,
+                                value: item.priority,
                                 child: Text(
-                                  item,
+                                  item.priority??"",
                                   style: TextStyle(fontSize: 9),
                                 ),
                               ))
@@ -372,6 +404,10 @@ class AddTaskState extends State<AddTask> {
                       onChanged: (item) {
                         setState(() {
                           priority = item.toString();
+                                     priorityid = myprority.firstWhere(
+                (employee) => item == (employee.priority??""),
+                
+              ).priorityId??0;
                         });
                         print(item);
                       }),
@@ -387,7 +423,7 @@ class AddTaskState extends State<AddTask> {
                     color: Colors.white),
                 child: InputDecorator(
                   decoration: const InputDecoration(
-                      labelText: "Priority",
+                      labelText: "Assign To",
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.all(Radius.circular(8)),
                       )),
@@ -399,22 +435,26 @@ class AddTaskState extends State<AddTask> {
                       hint: Padding(
                           padding: EdgeInsets.fromLTRB(15, 0, 0, 0),
                           child: Text(
-                            priority,
+                            assigne,
                             style: TextStyle(fontSize: 10, color: Colors.black),
                             textAlign: TextAlign.center,
                           )),
-                      items: myprority
+                      items: collboraotrs
                           .map((item) => DropdownMenuItem<String>(
-                                value: item,
+                                value:"${ item.firstName??""} ${item.lastName??""}",
                                 child: Text(
-                                  item,
+                                  "${ item.firstName??""} ${item.lastName??""}",
                                   style: TextStyle(fontSize: 9),
                                 ),
                               ))
                           .toList(),
                       onChanged: (item) {
                         setState(() {
-                          priority = item.toString();
+                          assigne = item.toString();
+                                     assingnid = collboraotrs.firstWhere(
+                (employee) => item == ("${ employee.firstName??""} ${employee.lastName??""}"),
+                
+              ).userId??0;
                         });
                         print(item);
                       }),
@@ -447,9 +487,9 @@ class AddTaskState extends State<AddTask> {
                           )),
                       items: myStatus
                           .map((item) => DropdownMenuItem<String>(
-                                value: item,
+                                value: item.taskStatus??"",
                                 child: Text(
-                                  item,
+                                  item.taskStatus??"New Status",
                                   style: TextStyle(fontSize: 9),
                                 ),
                               ))
@@ -457,6 +497,10 @@ class AddTaskState extends State<AddTask> {
                       onChanged: (item) {
                         setState(() {
                           Status = item.toString();
+                                 statusid = myStatus.firstWhere(
+                (employee) => item == (employee.taskStatus??""),
+                
+              ).taskStatusId??0;
                         });
                         print(item);
                       }),
@@ -471,7 +515,7 @@ class AddTaskState extends State<AddTask> {
                     color: Colors.white),
                 child: InputDecorator(
                   decoration: const InputDecoration(
-                      labelText: "Task",
+                      labelText: "Task Type",
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.all(Radius.circular(8)),
                       )),
@@ -489,9 +533,9 @@ class AddTaskState extends State<AddTask> {
                           )),
                       items: getTasks
                           .map((item) => DropdownMenuItem<String>(
-                                value: item,
+                                value: item.taskType,
                                 child: Text(
-                                  item,
+                                  item.taskType??"",
                                   style: TextStyle(fontSize: 9),
                                 ),
                               ))
@@ -499,10 +543,37 @@ class AddTaskState extends State<AddTask> {
                       onChanged: (item) {
                         setState(() {
                           task = item.toString();
+                                 taskTypeid = getTasks.firstWhere(
+                (employee) => item == (employee.taskType??""),
+                
+              ).taskTypeId??0;
                         });
                         print(item);
                       }),
                 )),
+            Container(
+                width: MediaQuery.of(context).size.width * 0.9,
+                margin: EdgeInsets.all(10),
+                height: MediaQuery.of(context).size.height * 0.07,
+                decoration: BoxDecoration(
+
+                    // borderRadius: BorderRadius.circular(),
+                    color: Colors.white),
+                child:MultiSelectDropDown(
+                      searchEnabled: true,
+                      padding: EdgeInsets.all(5),
+                      onOptionSelected: (value) {
+                        setState(() {
+                          assignedtp = value;
+                        });
+                      },
+                      options: 
+                          collboraotrs.map((e) => ValueItem(
+                              label: (e.firstName ?? "") +
+                                  " " +
+                                  (e.lastName ?? ""),
+                              value: e.userId))
+                          .toList()),),
 
             SizedBox(
               height: MediaQuery.of(context).size.height * 0.02,
@@ -597,12 +668,15 @@ class AddTaskState extends State<AddTask> {
                 SizedBox(
                   width: 10,
                 ),
-                OutlinedButton(
-                    onPressed: () {},
-                    child: const Text(
-                      "Save",
-                      style: TextStyle(color: Colors.black),
-                    )),
+           OutlinedButton(
+      onPressed: _isLoading ? null : _submitTask,
+      child: _isLoading
+          ? CircularProgressIndicator() // Loader when in progress
+          : const Text(
+              "Save",
+              style: TextStyle(color: Colors.black),
+            ),
+    ),
                 SizedBox(
                   width: 10,
                 ),
@@ -619,6 +693,66 @@ class AddTaskState extends State<AddTask> {
           ]),
         ));
   }
+
+  Future<void> _submitTask() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
+    final url = Uri.parse('https://portalwiz.net/laravelapi/public/api/add_project_tasks');
+
+    var requestBody = {
+      "account_id": "${widget.accid}",
+      "project_id": "${widget.projecid}",
+      "task_name": taskArea.text.toString(),
+      "sequence": "",
+      "assinged_to": "${assingnid}",
+      "priority_id": "${priorityid}",
+      "est_start_date": "${esStart.year}-${esStart.month}-${esStart.day}",
+      "est_end_date": "${esEnd.year}-${esEnd.month}-${esEnd.day}",
+      "task_status": "${statusid}",
+      "plan_start_date": "${planStart.year}-${planStart.month}-${planStart.day}",
+      "plan_end_date": "${planEnd.year}-${planEnd.month}-${planEnd.day}",
+      "act_start_date": "",
+      "act_end_date": "",
+      "act_efforts": "",
+      "collaborators_id": assignedtp.map((e) => e.value).toList(),
+      "created_by": "${sharedPreferences.getInt("user_id")}",
+      "est_efforts": "${esTime.text}",
+      "task_desc": getHtmlFromQuillController(editingtext),
+      "task_category": "${categoryid}",
+      "task_type": "${taskTypeid}",
+      "focus": false,
+      "billable": false,
+      "invoiced": true
+    };
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode(requestBody),
+      );
+
+      if (response.statusCode == 200) {
+       Get.showSnackbar(GetSnackBar(title: "Task Status",message: response.body,));
+      } else {
+        print('Server Error: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      print('Exception: $e');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  
 }
 
 class GetDatePicker extends StatefulWidget {
@@ -657,4 +791,30 @@ class GetDatePickerState extends State<GetDatePicker> {
       ),
     );
   }
+
 }
+
+String deltaToHtml(Delta delta) {
+  final buffer = StringBuffer();
+
+  for (var op in delta.toList()) {
+    if (op.isInsert) {
+      final insert = op.data;
+      if (insert is String) {
+        buffer.write(insert); // Plain text
+      } else if (insert is Map) {
+        // Handle embedded objects like images or custom embeds
+        if (insert.containsKey('image')) {
+          buffer.write('<img src="${insert['image']}" />');
+        }
+      }
+    } else if (op.isDelete) {
+      // Handle delete operations if needed
+    } else if (op.isRetain) {
+      // Handle retain operations if needed
+    }
+  }
+
+  return buffer.toString();
+}
+

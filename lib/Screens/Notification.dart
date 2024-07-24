@@ -34,8 +34,25 @@ class _NotificationPageState extends State<NotificationPage> {
     super.initState();
   }
 
+
+
+
+
+  void showLoadingDialog(){
+
+    showDialog(context: context, builder: (context){
+      return Center(child: CircularProgressIndicator(backgroundColor: Colors.transparent,color: Colors.blueAccent,),);
+     
+      
+    });
+
+  }
+
   Future<void> _fetchNotifications() async {
+
+
     SharedPreferences pref = await SharedPreferences.getInstance();
+    showLoadingDialog();
     try {
       final response = await http.post(
           Uri.parse(
@@ -52,13 +69,16 @@ class _NotificationPageState extends State<NotificationPage> {
         setState(() {
           data;
         });
+        Navigator.pop(context);
       } else {
         // Handle the error
         print('Failed to load notifications');
+        Navigator.pop(context);
       }
     } catch (e) {
       // Handle any exceptions
       print('Error: $e');
+      Navigator.pop(context);
     }
   }
 

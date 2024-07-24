@@ -35,11 +35,22 @@ getApiCall();
 
 
 
-Future<void> getApiCall()async{
-SharedPreferences pref= await SharedPreferences.getInstance();
+ void showLoadingDialog(){
 
+    showDialog(context: context, builder: (context){
+      return Center(child: CircularProgressIndicator(backgroundColor: Colors.transparent,color: Colors.blueAccent,),); 
+    });
+
+  }
+
+
+Future<void> getApiCall()async{
+ 
+SharedPreferences pref= await SharedPreferences.getInstance();
+showLoadingDialog();
 if(widget.check){
   await ApiCalls.getTimesheetbyTask(widget.accid, widget.projecid);
+  
 }
 else{
   await ApiCalls.getDataofTimeShaeet(widget.accid, pref.getInt('user_id')??0);
@@ -47,6 +58,7 @@ else{
   setState(() {
     timeSheet;
   });
+  Navigator.pop(context);
 
 
 }
@@ -110,12 +122,16 @@ class BuildCardForTimesheet extends StatelessWidget{
 final String day,date,comment,title,desc,startime,endtime,hours;
 
 
+
+
+
+
   @override
   Widget build(BuildContext context) {
 
         return Card(
           margin: EdgeInsets.all(15),
-  color: Color.fromARGB(255, 255, 204, 204),
+  color: Color.fromARGB(255, 201, 222, 255),
 child: Padding(
   padding: EdgeInsets.all(10),
   child: Container(
@@ -192,7 +208,7 @@ child: Padding(
                  
                    CircleAvatar(
                     child: Text(hours,style: TextStyle(color: Colors.white,fontSize: 18),),
-                    backgroundColor: const Color.fromARGB(255, 210, 69, 69),
+                    backgroundColor: Colors.blueAccent.shade400,
                     radius: 20,
                    )
               

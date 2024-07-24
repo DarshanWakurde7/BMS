@@ -3,20 +3,21 @@ class todolistpojo {
   int? userId;
   String? planName;
   String? planDate;
+  int? teamId;
+  int? status;
   String? updatedAt;
   String? achievements;
-    int? status;
   String? comments;
-  int? createdBy;
+  dynamic? createdBy;
   String? createdAt;
   dynamic? planUpdatedBy;
   dynamic? planUpdatedAt;
-  dynamic? achievementsUpdatedBy;
-  dynamic? achievementsUpdatedAt;
-  dynamic? commentUpdatedBy;
-  dynamic? commentUpdatedAt;
-  String? createdName;
-  String? createdLname;
+  int? achievementsUpdatedBy;
+  String? achievementsUpdatedAt;
+  int? commentUpdatedBy;
+  String? commentUpdatedAt;
+  String? achievementsUpdatedName;
+  String? commentUpdatedName;
   String? userName;
 
   todolistpojo(
@@ -24,28 +25,30 @@ class todolistpojo {
       this.userId,
       this.planName,
       this.planDate,
+      this.teamId,
+      this.status,
       this.updatedAt,
       this.achievements,
       this.comments,
       this.createdBy,
       this.createdAt,
-    this.status,
       this.planUpdatedBy,
       this.planUpdatedAt,
       this.achievementsUpdatedBy,
       this.achievementsUpdatedAt,
       this.commentUpdatedBy,
       this.commentUpdatedAt,
-      this.createdName,
-      this.createdLname,
+      this.achievementsUpdatedName,
+      this.commentUpdatedName,
       this.userName});
 
   todolistpojo.fromJson(Map<String, dynamic> json) {
     planId = json['plan_id'];
     userId = json['user_id'];
     planName = json['plan_name'];
-    status = json['status'];
     planDate = json['plan_date'];
+    teamId = json['team_id'];
+    status = json['status'];
     updatedAt = json['updated_at'];
     achievements = json['achievements'];
     comments = json['comments'];
@@ -57,8 +60,8 @@ class todolistpojo {
     achievementsUpdatedAt = json['achievements_updated_at'];
     commentUpdatedBy = json['comment_updated_by'];
     commentUpdatedAt = json['comment_updated_at'];
-    createdName = json['created_name'];
-    createdLname = json['created_lname'];
+    achievementsUpdatedName = json['achievements_updated_name'];
+    commentUpdatedName = json['comment_updated_name'];
     userName = json['user_name'];
   }
 
@@ -68,6 +71,7 @@ class todolistpojo {
     data['user_id'] = this.userId;
     data['plan_name'] = this.planName;
     data['plan_date'] = this.planDate;
+    data['team_id'] = this.teamId;
     data['status'] = this.status;
     data['updated_at'] = this.updatedAt;
     data['achievements'] = this.achievements;
@@ -80,8 +84,8 @@ class todolistpojo {
     data['achievements_updated_at'] = this.achievementsUpdatedAt;
     data['comment_updated_by'] = this.commentUpdatedBy;
     data['comment_updated_at'] = this.commentUpdatedAt;
-    data['created_name'] = this.createdName;
-    data['created_lname'] = this.createdLname;
+    data['achievements_updated_name'] = this.achievementsUpdatedName;
+    data['comment_updated_name'] = this.commentUpdatedName;
     data['user_name'] = this.userName;
     return data;
   }

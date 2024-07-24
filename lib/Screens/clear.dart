@@ -72,7 +72,7 @@ ApiCalls.getDataofCards(7.toString());
     super.setState(fn);
   }
 
-                          return myCards1(Title: dataofCardClear[index].projectName??"Project Name Here",taskTypeName: dataofCardClear[index].taskTypeName??"Noraml", description: dataofCardClear[index].taskName??"Task Name", mydata: myCategories, colab: dataofCardClear[index].collaborators??[],priority: myprority, plandate: dataofCardClear[index].planStartDate??"00-00-0000", todate: dataofCardClear[index].planEndDate??"00-00-0000", assigne: dataofCardClear[index].assingedName??"Donald Trumph",index: index,isFocused: dataOfCards[index].focus??false,data: dataOfCards[index],refresh: (){
+                          return myCards1(Title: dataofCardClear[index].projectName??"Project Name Here",taskTypeName: dataofCardClear[index].taskTypeName??"Noraml", description: dataofCardClear[index].taskName??"Task Name", mydata: myStatus, colab: dataofCardClear[index].collaborators??[],priority: myprority, plandate: dataofCardClear[index].planStartDate??"00-00-0000", todate: dataofCardClear[index].planEndDate??"00-00-0000", assigne: dataofCardClear[index].assingedName??"Donald Trumph",index: index,isFocused: dataOfCards[index].focus??false,data: dataOfCards[index],refresh: (){
                         ApiCalls.getDataofCards(7.toString());
                           },);
 
