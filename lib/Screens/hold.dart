@@ -44,7 +44,7 @@ class HoldState extends State<Hold> {
 
               return myCards1(
                 Title: dataOfCards[index].projectName ?? "Project Name Here",
-                taskTypeName: dataOfCards[index].taskTypeName ?? "Noraml",
+                taskTypeName: dataOfCards[index].taskTypeName ?? "Normal",
                 description: dataOfCards[index].taskName ?? "Task Name",
                 mydata: myStatus,
                 colab: dataOfCards[index].collaborators ?? [],

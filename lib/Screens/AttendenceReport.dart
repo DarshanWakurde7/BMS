@@ -1,250 +1,164 @@
+import 'package:bms/ApiCalls/apiCalls.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:date_picker_timeline/date_picker_timeline.dart';
 
-class AttendanceScreen extends StatefulWidget {
+class AttendanceReportPage extends StatefulWidget {
   @override
-  _AttendanceScreenState createState() => _AttendanceScreenState();
+  _AttendanceReportPageState createState() => _AttendanceReportPageState();
 }
 
-class _AttendanceScreenState extends State<AttendanceScreen> {
-  DateTime currentDate = DateTime.now();
-  List<AttendanceRecord> attendanceRecords = [];
-  bool isLoading = false;
-  String? errorMessage;
+class _AttendanceReportPageState extends State<AttendanceReportPage> {
+  DateTime _selectedDate = DateTime.now();
+  DateTime _startDate = DateTime.now().subtract(Duration(days: 20));
+  List<Map<String, dynamic>> attendanceData = [];
+  bool _isLoading = false;
+  DatePickerController _dateController = DatePickerController();
 
   @override
   void initState() {
     super.initState();
-    _fetchAttendanceData();
-  }
-
-  void _previousMonth() {
-    setState(() {
-      currentDate = DateTime(currentDate.year, currentDate.month - 1, 1);
-      _fetchAttendanceData();
+    fetchAttendanceData(_selectedDate);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Ensure _dateController is attached before animating to the selected date
+      if (_dateController != null) {
+        _dateController.animateToDate(_selectedDate);
+      }
     });
   }
 
-  void _nextMonth() {
+  Future<void> fetchAttendanceData(DateTime date) async {
     setState(() {
-      currentDate = DateTime(currentDate.year, currentDate.month + 1, 1);
-      _fetchAttendanceData();
+      _isLoading = true;
     });
-  }
-
-  String _formatToIST(DateTime dateTime) {
-    final istTime = dateTime.add(Duration(hours: 5, minutes: 30));
-    return DateFormat('hh:mm a').format(istTime);
-  }
-
-  Future<void> _fetchAttendanceData() async {
-    setState(() {
-      isLoading = true;
-      errorMessage = null;
-    });
-
     try {
-      final prefs = await SharedPreferences.getInstance();
-      int? employeeId = prefs.getInt('employee_id');
-
-      if (employeeId == null) {
-        setState(() {
-          errorMessage = 'Employee ID not found';
-        });
-        return;
-      }
-
-      final response = await http.post(
-        Uri.parse(
-            'http://91.108.111.222:8000/attendance/fetch_employee_status/'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'employee_id': employeeId}),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data['status'] == 'success') {
-          List<AttendanceRecord> records =
-              _processAttendanceData(data['attendance']);
-          setState(() {
-            attendanceRecords = records;
-          });
-        } else {
-          setState(() {
-            errorMessage = data['message'];
-          });
-        }
-      } else {
-        setState(() {
-          errorMessage = 'Failed to fetch data';
-        });
-      }
-    } catch (e) {
+      List<Map<String, dynamic>> data = await ApiCalls.fetchAttendance(date);
       setState(() {
-        errorMessage = e.toString();
+        attendanceData = data;
       });
+    } catch (e) {
+      // Handle error
+      print('Failed to load attendance data: $e');
     } finally {
       setState(() {
-        isLoading = false;
+        _isLoading = false;
       });
     }
   }
 
-  List<AttendanceRecord> _processAttendanceData(List<dynamic> attendanceData) {
-    final firstDayOfMonth = DateTime(currentDate.year, currentDate.month, 1);
-    final lastDayOfMonth = DateTime(currentDate.year, currentDate.month + 1, 0);
-
-    Map<int, AttendanceRecord> recordsMap = {};
-
-    for (var record in attendanceData) {
-      DateTime checkInTime = DateTime.parse(record['check_in_time']);
-      DateTime? checkOutTime = record['check_out_time'] != null
-          ? DateTime.parse(record['check_out_time'])
-          : null;
-
-      int day = checkInTime.day;
-      double totalHours = checkOutTime != null
-          ? (checkOutTime.difference(checkInTime).inMinutes / 60).toDouble()
-          : 0.0;
-
-      recordsMap[day] = AttendanceRecord(
-        day: DateFormat('d').format(checkInTime),
-        weekday: DateFormat('EEE').format(checkInTime).toUpperCase(),
-        punchIn: _formatToIST(checkInTime),
-        punchOut: checkOutTime != null ? _formatToIST(checkOutTime) : '',
-        totalHours: totalHours.toStringAsFixed(2) + 'h',
-      );
-    }
-
-    List<AttendanceRecord> records = [];
-    for (int i = 1; i <= lastDayOfMonth.day; i++) {
-      final date = DateTime(currentDate.year, currentDate.month, i);
-      final weekday = DateFormat('EEE').format(date).toUpperCase();
-      records.add(recordsMap[i] ??
-          AttendanceRecord(
-            day: DateFormat('d').format(date),
-            weekday: weekday,
-            punchIn: '',
-            punchOut: '',
-            totalHours: '',
-          ));
-    }
-
-    return records;
+  void _onDateChange(DateTime date) {
+    setState(() {
+      _selectedDate = date;
+    });
+    fetchAttendanceData(date);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: Text('Attendance Report'),
+      ),
       body: Column(
         children: [
           Container(
-            padding: EdgeInsets.all(16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                IconButton(
-                  icon: Icon(Icons.arrow_back_ios),
-                  onPressed: _previousMonth,
-                ),
-                Text(
-                  DateFormat.yMMM().format(currentDate),
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                IconButton(
-                  icon: Icon(Icons.arrow_forward_ios),
-                  onPressed: _nextMonth,
-                ),
-              ],
+            height: 100,
+            margin: const EdgeInsets.symmetric(vertical: 16.0),
+            child: DatePicker(
+              _startDate,
+              initialSelectedDate: _selectedDate,
+              selectionColor: Colors.blue,
+              selectedTextColor: Colors.white,
+              daysCount: 365,
+              controller: _dateController, // Attach the controller here
+              onDateChange: (date) {
+                _onDateChange(date);
+                print('Selected date: $date');
+              },
             ),
           ),
-          Expanded(
-            child: isLoading
-                ? Center(child: CircularProgressIndicator())
-                : errorMessage != null
-                    ? Center(child: Text(errorMessage!))
-                    : ListView.builder(
-                        itemCount: attendanceRecords.length,
-                        itemBuilder: (context, index) {
-                          return AttendanceCard(attendanceRecords[index]);
-                        },
-                      ),
-          ),
+          _isLoading
+              ? Center(
+                  child: CircularProgressIndicator(),
+                )
+              : Expanded(
+                  child: attendanceData.isEmpty
+                      ? Center(
+                          child: Text(
+                            'No data found',
+                            style:
+                                TextStyle(fontSize: 18, color: Colors.black54),
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(8.0),
+                          itemCount: attendanceData.length,
+                          itemBuilder: (context, index) {
+                            final attendance = attendanceData[index];
+                            return Card(
+                              color: Color.fromARGB(255, 206, 236, 255),
+                              elevation: 4,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              margin: const EdgeInsets.symmetric(vertical: 8.0),
+                              child: Padding(
+                                padding: const EdgeInsets.all(12.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      attendance['username'],
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    SizedBox(height: 8),
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text('Punch Status'),
+                                            Text(
+                                              attendance['punchStatus'],
+                                              style: TextStyle(
+                                                  fontWeight: FontWeight.bold),
+                                            ),
+                                          ],
+                                        ),
+                                        Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text('Punch Time'),
+                                            Text(
+                                              attendance['punchTime'],
+                                              style: TextStyle(
+                                                  fontWeight: FontWeight.bold),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
         ],
       ),
     );
   }
 }
 
-class AttendanceRecord {
-  final String day;
-  final String weekday;
-  final String punchIn;
-  final String punchOut;
-  final String totalHours;
-
-  AttendanceRecord({
-    required this.day,
-    required this.weekday,
-    required this.punchIn,
-    required this.punchOut,
-    required this.totalHours,
-  });
-}
-
-class AttendanceCard extends StatelessWidget {
-  final AttendanceRecord record;
-
-  AttendanceCard(this.record);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-      padding: EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        color: Color.fromARGB(255, 175, 198, 233),
-        borderRadius: BorderRadius.circular(8.0),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '${record.day} ${record.weekday}',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: 8.0),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Punch In'),
-                  Text(record.punchIn, style: TextStyle(fontSize: 16)),
-                ],
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Punch Out'),
-                  Text(record.punchOut, style: TextStyle(fontSize: 16)),
-                ],
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Total Hours'),
-                  Text(record.totalHours, style: TextStyle(fontSize: 16)),
-                ],
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+void main() {
+  runApp(MaterialApp(
+    home: AttendanceReportPage(),
+  ));
 }

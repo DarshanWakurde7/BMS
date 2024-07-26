@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
+
 class ProjectManagerSheet extends StatefulWidget {
   const ProjectManagerSheet({required this.planid});
   final int? planid;
@@ -25,6 +26,7 @@ List<dynamic> _employeeList = [];
   void initState() {
     super.initState();
     fetchTeams();
+    fetchPlan();
     // fetchEmployees();
   }
 
@@ -40,56 +42,57 @@ List<dynamic> _employeeList = [];
   //     print('Error fetching employees: $e');
   //   }
   // }
+Future<void> fetchPlan() async {
+  if (widget.planid != null) {
+    try {
+      final response = await http.post(
+        Uri.parse('https://portalwiz.net/laravelapi/public/api/fetch_single_daily_plan'),
+        body: {"plan_id": "${widget.planid}"},
+      );
 
-  Future<void> fetchPlan() async {
-    if (widget.planid != null) {
-      try {
-        final response = await http.post(
-          Uri.parse('https://pw-bms-dev.portalwiz.in/laravelapi/public/api/fetch_signal_daily_plan'),
-          body: {"plan_id": "${widget.planid}"},
-        );
-        print(response.body);
+      print(response.body + " new Responseee....");
 
-        if (response.statusCode == 200) {
-          final List<dynamic> responseData = jsonDecode(response.body);
-          if (responseData.isNotEmpty) {
-            final data = responseData[0];
-            bool functionData = await fetchTeamEmployees(data['team_id']);
+      if (response.statusCode == 200) {
+        final List<dynamic> responseData = jsonDecode(response.body);
+        if (responseData.isNotEmpty) {
+          final data = responseData[0];
+          bool functionData = await fetchTeamEmployees(data['team_id']);
 
-            setState(() {
-              _selectedDate = data['plan_date'] != null ? DateTime.parse(data['plan_date']) : DateTime.now();
-              _entryController.text = data['plan_name'] ?? "";
-              _isPlanCompleted = data['status'] == 1;
-              _selectedTeam = data['team_id'];
+          setState(() {
+            _selectedDate = data['plan_date'] != null ? DateTime.parse(data['plan_date']) : DateTime.now();
+            _entryController.text = data['plan_name'] ?? "";
+            _isPlanCompleted = data['status'] == 1;
+            _selectedTeam = data['team_id'];
 
-              if (data['user_id'] != null && functionData) {
-                try {
-                  final selectedEmployee = _employeeList.firstWhere(
-                    (employee) => employee['user_id'].toString() == data['user_id'].toString(),
-                    
-                  );
-                  _selectedEmployee = selectedEmployee != null
-                      ? '${selectedEmployee['first_name']} ${selectedEmployee['last_name']}'
-                      : null;
-                } catch (e) {
-                  print('Employee not found: $e');
-                  _selectedEmployee = null;
-                }
+            if (data['user_id'] != null && functionData) {
+              try {
+                final selectedEmployee = _employeeList.firstWhere(
+                  (employee) => employee['user_id'].toString() == data['user_id'].toString(),
+                  orElse: () => null,
+                );
+                _selectedEmployee = selectedEmployee != null
+                    ? '${selectedEmployee['first_name']} ${selectedEmployee['last_name']}'
+                    : null;
+              } catch (e) {
+                print('Employee not found: $e');
+                _selectedEmployee = null;
               }
-            });
-          } else {
-            print('No data found.');
-          }
+            }
+          });
         } else {
-          print('Failed to fetch plan. Status code: ${response.statusCode}');
+          print('No data found.');
         }
-      } catch (e) {
-        print('Error fetching plan: $e');
+      } else {
+        print('Failed to fetch plan. Status code: ${response.statusCode}');
       }
-    } else {
-      print('Plan ID is null');
+    } catch (e) {
+      print('Error fetching plan: $e');
     }
+  } else {
+    print('Plan ID is null');
   }
+}
+
 
  Future<bool> fetchTeamEmployees(int teamId) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -133,6 +136,11 @@ List<dynamic> _employeeList = [];
       return false;
     }
   }
+
+
+
+
+  
 
   Future<void> fetchTeams() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();

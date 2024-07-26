@@ -1,62 +1,33 @@
-
-
-
 import 'package:bms/widgets/CardDesign.dart';
 
 import 'package:bms/ApiCalls/apiCalls.dart';
 
 import 'package:flutter/material.dart';
 
+List<String> mydata = ['lsd', 'sdkm', 'skdcms', 'dcsd', 'dcsd'];
+List<String> colab = ['lsd', 'sdkm', 'skdcms', 'dcsd', 'dcsd'];
 
-List<String> mydata=['lsd','sdkm','skdcms','dcsd','dcsd'];
-List<String> colab=['lsd','sdkm','skdcms','dcsd','dcsd'];
-
-
-class Complete extends StatefulWidget{
+class Complete extends StatefulWidget {
   @override
   State<StatefulWidget> createState() {
- return CompleteState();
-
+    return CompleteState();
   }
-
-
 }
 
-
-class CompleteState extends State<Complete>{
-
-
-
-
-
-@override
+class CompleteState extends State<Complete> {
+  @override
   void initState() {
-getApiCallsActive();
- 
+    getApiCallsActive();
+
     super.initState();
   }
-  
 
-void getApiCallsActive()async{
-     await ApiCalls.getDataofCards(5.toString());
-  setState(() { dataOfCards;});
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  void getApiCallsActive() async {
+    await ApiCalls.getDataofCards(5.toString());
+    setState(() {
+      dataOfCards;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

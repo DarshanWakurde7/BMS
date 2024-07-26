@@ -6,6 +6,7 @@ import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 class LeaveRequest extends StatefulWidget {
@@ -20,11 +21,11 @@ class _LeaveRequestState extends State<LeaveRequest> {
   List<dynamic> wfhRequests = [];
   List<dynamic> approvedWfhRequests = [];
   List<dynamic> deniedWfhRequests = [];
-  final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _fetchAndStoreEmployeeId();
     fetchData();
     fetchWFHData();
     _fetchApprovedLeaves();
@@ -38,12 +39,12 @@ class _LeaveRequestState extends State<LeaveRequest> {
   //   _fetchApprovedLeaves();
   //   _fetchDeniedLeaves();
   //   //_fetchApprovedWfh();
-  //   setState(() {}); // Refresh UI after data is fetched
+  //   setState(() {});
   // }
 
   Future<void> fetchData() async {
     try {
-      List<dynamic> data = await ApiCalls.fetchAllLeave('1');
+      List<dynamic> data = await ApiCalls.fetchAllLeave('1100');
       setState(() {
         leaveRequests = data;
         // approvedLeaveRequests = leaveRequests
@@ -55,6 +56,16 @@ class _LeaveRequestState extends State<LeaveRequest> {
       });
     } catch (e) {
       print('Error fetching leave data: $e');
+    }
+  }
+
+  Future<void> _fetchAndStoreEmployeeId() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    int? userId = prefs.getInt('user_id');
+    if (userId != null) {
+      await ApiCalls.fetchAndStoreEmployeeId(userId, '1100');
+    } else {
+      print('User ID not found in SharedPreferences');
     }
   }
 
@@ -71,12 +82,23 @@ class _LeaveRequestState extends State<LeaveRequest> {
 
   Future<void> _fetchApprovedLeaves() async {
     try {
-      List<dynamic> leavesData = await ApiCalls.fetchApprovedLeaves('1', '4');
-      List<dynamic> wfhData = await ApiCalls.fetchApprovedWfh('1', '4');
-      setState(() {
-        approvedLeaveRequests = leavesData;
-        approvedWfhRequests = wfhData;
-      });
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? employeeId = prefs.getString('employee_id');
+      print('Retrieved employee ID: $employeeId');
+      if (employeeId != null) {
+        List<dynamic> leavesData =
+            await ApiCalls.fetchApprovedLeaves('1', employeeId);
+        List<dynamic> wfhData =
+            await ApiCalls.fetchApprovedWfh('1', employeeId);
+        setState(() {
+          approvedLeaveRequests = leavesData;
+          approvedWfhRequests = wfhData;
+        });
+        print('Approved leave requests: $approvedLeaveRequests');
+        print('Approved WFH requests: $approvedWfhRequests');
+      } else {
+        print('No employee ID found');
+      }
     } catch (e) {
       print('Error fetching approved requests: $e');
     }
@@ -84,12 +106,23 @@ class _LeaveRequestState extends State<LeaveRequest> {
 
   Future<void> _fetchDeniedLeaves() async {
     try {
-      List<dynamic> data = await ApiCalls.fetchDeniedLeaves('1', '1');
-      List<dynamic> wfhData = await ApiCalls.fetchDeniedWfh('1', '1');
-      setState(() {
-        deniedLeaveRequests = data;
-        deniedWfhRequests = wfhData;
-      });
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? employeeId = prefs.getString('employee_id');
+      print('Retrieved employee ID: $employeeId');
+      if (employeeId != null) {
+        List<dynamic> data =
+            await ApiCalls.fetchDeniedLeaves('1100', employeeId);
+        List<dynamic> wfhData =
+            await ApiCalls.fetchDeniedWfh('1100', employeeId);
+        setState(() {
+          deniedLeaveRequests = data;
+          deniedWfhRequests = wfhData;
+        });
+        print('Denied leave requests: $deniedLeaveRequests');
+        print('Denied WFH requests: $deniedWfhRequests');
+      } else {
+        print('No employee ID found');
+      }
     } catch (e) {
       print('Error fetching denied leaves: $e');
     }
@@ -162,6 +195,16 @@ class _LeaveRequestState extends State<LeaveRequest> {
       child: Scaffold(
         appBar: AppBar(
           title: Text('Leave List'),
+          actions: [
+            IconButton(
+              icon: Icon(
+                Icons.calendar_today,
+              ),
+              onPressed: () {
+                _selectDate(context);
+              },
+            ),
+          ],
           bottom: PreferredSize(
             preferredSize: Size.fromHeight(30.0),
             child: TabBar(
@@ -191,253 +234,258 @@ class _LeaveRequestState extends State<LeaveRequest> {
     );
   }
 
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? selectedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (selectedDate != null) {}
+  }
+
   Widget _buildLeaveRequestList(List<dynamic> requests) {
     if (requests.isEmpty) {
       return Center(
-        child: CircularProgressIndicator(), // Or any placeholder widget
+        child: CircularProgressIndicator(),
       );
     }
-    return AnimatedList(
-      key: _listKey,
-      initialItemCount: requests.length,
-      itemBuilder: (context, index, animation) {
-        return _buildLeaveRequestCard(requests[index], index, animation);
+    return ListView.builder(
+      itemCount: requests.length,
+      itemBuilder: (context, index) {
+        return _buildLeaveRequestCard(requests[index], index);
       },
     );
   }
 
-  Widget _buildLeaveRequestCard(
-      dynamic leaveRequest, int index, Animation<double> animation) {
-    return SizeTransition(
-      sizeFactor: animation,
-      child: Card(
-        margin: EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-        color: Color.fromARGB(255, 206, 236, 255),
-        child: Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  SizedBox(width: 16.0),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        leaveRequest['employee_name'] ?? 'Unknown Employee',
-                        style: GoogleFonts.getFont(
-                          'Lato',
-                          textStyle: TextStyle(
-                            fontSize: 16.0,
-                            fontWeight: FontWeight.bold,
-                          ),
+  Widget _buildLeaveRequestCard(dynamic leaveRequest, int index) {
+    return Card(
+      margin: EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+      color: Color.fromARGB(255, 206, 236, 255),
+      child: Padding(
+        padding: EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                SizedBox(width: 16.0),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      leaveRequest['employee_name'] ?? 'Unknown Employee',
+                      style: GoogleFonts.getFont(
+                        'Lato',
+                        textStyle: TextStyle(
+                          fontSize: 16.0,
+                          fontWeight: FontWeight.bold,
                         ),
-                      ),
-                      Text(
-                        leaveRequest['designation'] ?? 'Unknown Employee',
-                        style: GoogleFonts.getFont(
-                          'Lato',
-                        ),
-                      ),
-                    ],
-                  ),
-                  Spacer(),
-                  Container(
-                      padding:
-                          EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        borderRadius: BorderRadius.circular(8.0),
-                      ),
-                      child: Text(
-                        leaveRequest['request_type'],
-                        style: GoogleFonts.getFont(
-                          'Lato',
-                          textStyle: TextStyle(
-                            color: Colors.blue,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      )),
-                ],
-              ),
-              SizedBox(height: 16.0),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'From Date',
-                        style: GoogleFonts.getFont(
-                          'Lato',
-                        ),
-                      ),
-                      Text(
-                        leaveRequest['date_from'],
-                        style: GoogleFonts.getFont(
-                          'Lato',
-                          textStyle: TextStyle(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'To Date',
-                        style: GoogleFonts.getFont(
-                          'Lato',
-                        ),
-                      ),
-                      Text(
-                        leaveRequest['date_to'],
-                        style: GoogleFonts.getFont(
-                          'Lato',
-                          textStyle: TextStyle(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Leave Days',
-                        style: GoogleFonts.getFont(
-                          'Lato',
-                        ),
-                      ),
-                      Text(
-                        leaveRequest['no_of_days'],
-                        style: GoogleFonts.getFont(
-                          'Lato',
-                          textStyle: TextStyle(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              SizedBox(height: 16.0),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Return to office date',
-                        style: GoogleFonts.getFont(
-                          'Lato',
-                        ),
-                      ),
-                      Text(
-                        leaveRequest['return_to_office'],
-                        style: GoogleFonts.getFont(
-                          'Lato',
-                          textStyle: TextStyle(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (leaveRequest['attachment'] != null)
-                    Row(
-                      children: [
-                        Text(
-                          'Attachment',
-                          style: GoogleFonts.getFont(
-                            'Lato',
-                            textStyle: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          icon: Icon(Icons.edit_document, color: Colors.green),
-                          onPressed: () {
-                            openAttachment(leaveRequest['attachment']);
-                          },
-                        ),
-                      ],
-                    ),
-                ],
-              ),
-              SizedBox(height: 16.0),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Reason:',
-                    style: GoogleFonts.getFont(
-                      'Lato',
-                    ),
-                  ),
-                  SizedBox(height: 4.0),
-                  Text(
-                    leaveRequest['reason'],
-                    textAlign: TextAlign.left,
-                    style: GoogleFonts.getFont(
-                      'Lato',
-                      textStyle: TextStyle(
-                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 16.0),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  ElevatedButton(
-                    onPressed: () {
-                      _showStatusDialog(
-                          leaveRequest['leave_id'].toString(), '1', index);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                    ),
-                    child: Text(
-                      'Approve',
+                    Text(
+                      leaveRequest['designation'] ?? 'Unknown Employee',
                       style: GoogleFonts.getFont(
                         'Lato',
                       ),
                     ),
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      _showStatusDialog(
-                          leaveRequest['leave_id'].toString(), '2', index);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color.fromARGB(255, 207, 92, 69),
-                      foregroundColor: Colors.white,
+                  ],
+                ),
+                Spacer(),
+                Container(
+                    padding:
+                        EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      borderRadius: BorderRadius.circular(8.0),
                     ),
                     child: Text(
-                      'Reject',
+                      leaveRequest['request_type'],
+                      style: GoogleFonts.getFont(
+                        'Lato',
+                        textStyle: TextStyle(
+                          color: Colors.blue,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    )),
+              ],
+            ),
+            SizedBox(height: 16.0),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'From Date',
                       style: GoogleFonts.getFont(
                         'Lato',
                       ),
                     ),
+                    Text(
+                      leaveRequest['date_from'],
+                      style: GoogleFonts.getFont(
+                        'Lato',
+                        textStyle: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'To Date',
+                      style: GoogleFonts.getFont(
+                        'Lato',
+                      ),
+                    ),
+                    Text(
+                      leaveRequest['date_to'],
+                      style: GoogleFonts.getFont(
+                        'Lato',
+                        textStyle: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Leave Days',
+                      style: GoogleFonts.getFont(
+                        'Lato',
+                      ),
+                    ),
+                    Text(
+                      leaveRequest['no_of_days'],
+                      style: GoogleFonts.getFont(
+                        'Lato',
+                        textStyle: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            SizedBox(height: 16.0),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Return to office date',
+                      style: GoogleFonts.getFont(
+                        'Lato',
+                      ),
+                    ),
+                    Text(
+                      leaveRequest['return_to_office'],
+                      style: GoogleFonts.getFont(
+                        'Lato',
+                        textStyle: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (leaveRequest['attachment'] != null)
+                  Row(
+                    children: [
+                      Text(
+                        'Attachment',
+                        style: GoogleFonts.getFont(
+                          'Lato',
+                          textStyle: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.edit_document, color: Colors.green),
+                        onPressed: () {
+                          openAttachment(leaveRequest['attachment']);
+                        },
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ],
-          ),
+              ],
+            ),
+            SizedBox(height: 16.0),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Reason:',
+                  style: GoogleFonts.getFont(
+                    'Lato',
+                  ),
+                ),
+                SizedBox(height: 4.0),
+                Text(
+                  leaveRequest['reason'],
+                  textAlign: TextAlign.left,
+                  style: GoogleFonts.getFont(
+                    'Lato',
+                    textStyle: TextStyle(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 16.0),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton(
+                  onPressed: () {
+                    _showStatusDialog(
+                        leaveRequest['leave_id'].toString(), '1', index);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: Text(
+                    'Approve',
+                    style: GoogleFonts.getFont(
+                      'Lato',
+                    ),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    _showStatusDialog(
+                        leaveRequest['leave_id'].toString(), '2', index);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color.fromARGB(255, 207, 92, 69),
+                    foregroundColor: Colors.white,
+                  ),
+                  child: Text(
+                    'Reject',
+                    style: GoogleFonts.getFont(
+                      'Lato',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -735,9 +783,6 @@ class _LeaveRequestState extends State<LeaveRequest> {
   void _updateLeaveStatus(
       String leaveId, String status, String comment, int index) {
     ApiCalls.updateLeaveStatus(leaveId, status, comment).then((_) {
-      setState(() {
-        _removeItemWithAnimation(index);
-      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(status == '1'
@@ -745,304 +790,306 @@ class _LeaveRequestState extends State<LeaveRequest> {
               : 'Leave rejected successfully'),
         ),
       );
+      fetchData();
     }).catchError((error) {
       print('Error updating leave status: $error');
     });
   }
 
-  void _removeItemWithAnimation(int index) {
-    final removedItem = leaveRequests.removeAt(index);
-    _listKey.currentState?.removeItem(
-      index,
-      (context, animation) =>
-          _buildLeaveRequestCard(removedItem, index, animation),
-      duration: Duration(milliseconds: 300),
-    );
-  }
-}
+//   void _removeItemWithAnimation(int index) {
+//     final removedItem = leaveRequests.removeAt(index);
+//     _listKey.currentState?.removeItem(
+//       index,
+//       (context, animation) =>
+//           _buildLeaveRequestCard(removedItem, index, animation),
+//       duration: Duration(milliseconds: 300),
+//     );
+//   }
+// }
 
 //--------------------------------------------------------------------------------------------//
-Widget _buildApprovedRequestList(List<dynamic> requests) {
-  return ListView.builder(
-    itemCount: requests.length,
-    itemBuilder: (context, index) {
-      return _buildApprovedRequestCard(requests[index]);
-    },
-  );
-}
+  Widget _buildApprovedRequestList(List<dynamic> requests) {
+    return ListView.builder(
+      itemCount: requests.length,
+      itemBuilder: (context, index) {
+        return _buildApprovedRequestCard(requests[index]);
+      },
+    );
+  }
 
-Widget _buildApprovedRequestCard(dynamic approvedRequest) {
-  bool isLeaveRequest = approvedRequest.containsKey('request_type');
+  Widget _buildApprovedRequestCard(dynamic approvedRequest) {
+    bool isLeaveRequest = approvedRequest.containsKey('request_type');
 
-  return Card(
-    margin: EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-    color: Color.fromARGB(255, 206, 236, 255),
-    child: Padding(
-      padding: EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              SizedBox(width: 16.0),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Text(
-                  //   approvedRequest['employee_name'],
-                  //   style: TextStyle(
-                  //     fontSize: 16.0,
-                  //     fontWeight: FontWeight.bold,
-                  //   ),
-                  // ),
-                  Text(approvedRequest['designation'] ?? 'Unknown Employee'),
-                ],
-              ),
-              Spacer(),
-              Container(
-                padding: EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(8.0),
+    return Card(
+      margin: EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+      color: Color.fromARGB(255, 206, 236, 255),
+      child: Padding(
+        padding: EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                SizedBox(width: 16.0),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      approvedRequest['employee_name'] ?? 'null',
+                      style: TextStyle(
+                        fontSize: 16.0,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(approvedRequest['designation'] ?? 'Unknown Employee'),
+                  ],
                 ),
-                child: Text(
-                  'Approved',
+                Spacer(),
+                Container(
+                  padding: EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(8.0),
+                  ),
+                  child: Text(
+                    'Approved',
+                    style: TextStyle(
+                      color: const Color.fromARGB(255, 76, 175, 172),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 16.0),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('From Date'),
+                    Text(
+                      approvedRequest['date_from'],
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('To Date'),
+                    Text(
+                      approvedRequest['date_to'],
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isLeaveRequest
+                          ? approvedRequest['request_type']
+                          : 'WFH Request',
+                    ),
+                    Text(
+                      approvedRequest['no_of_days'],
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            SizedBox(height: 16.0),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Return to Office Date:'),
+                Text(
+                  approvedRequest['return_to_office'],
+                  textAlign: TextAlign.left,
                   style: TextStyle(
-                    color: const Color.fromARGB(255, 76, 175, 172),
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-              ),
-            ],
-          ),
-          SizedBox(height: 16.0),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('From Date'),
-                  Text(
-                    approvedRequest['date_from'],
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
+              ],
+            ),
+            SizedBox(height: 16.0),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Reason:'),
+                SizedBox(height: 4.0),
+                Text(
+                  approvedRequest['reason'],
+                  textAlign: TextAlign.left,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
                   ),
-                ],
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('To Date'),
-                  Text(
-                    approvedRequest['date_to'],
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    isLeaveRequest
-                        ? approvedRequest['request_type']
-                        : 'WFH Request',
-                  ),
-                  Text(
-                    approvedRequest['no_of_days'],
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          SizedBox(height: 16.0),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Return to Office Date:'),
-              Text(
-                approvedRequest['return_to_office'],
-                textAlign: TextAlign.left,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
                 ),
-              ),
-            ],
-          ),
-          SizedBox(height: 16.0),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Reason:'),
-              SizedBox(height: 4.0),
-              Text(
-                approvedRequest['reason'],
-                textAlign: TextAlign.left,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          // SizedBox(height: 16.0),
-          // Column(
-          //   crossAxisAlignment: CrossAxisAlignment.start,
-          //   children: [
-          //     Text('Comment:'),
-          //     SizedBox(height: 4.0),
-          //     Text(
-          //       approvedRequest['comment'],
-          //       textAlign: TextAlign.left,
-          //       style: TextStyle(
-          //         fontWeight: FontWeight.bold,
-          //       ),
-          //     ),
-          //   ],
-          // ),
-        ],
+              ],
+            ),
+            // SizedBox(height: 16.0),
+            // Column(
+            //   crossAxisAlignment: CrossAxisAlignment.start,
+            //   children: [
+            //     Text('Comment:'),
+            //     SizedBox(height: 4.0),
+            //     Text(
+            //       approvedRequest['comment'],
+            //       textAlign: TextAlign.left,
+            //       style: TextStyle(
+            //         fontWeight: FontWeight.bold,
+            //       ),
+            //     ),
+            //   ],
+            // ),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
 //---------------------------------------------------------------------------------------------------//
-Widget _buildDeniedRequestList(List<dynamic> requests) {
-  return ListView.builder(
-    itemCount: requests.length,
-    itemBuilder: (context, index) {
-      return _buildDeniedRequestCard(requests[index]);
-    },
-  );
-}
+  Widget _buildDeniedRequestList(List<dynamic> requests) {
+    return ListView.builder(
+      itemCount: requests.length,
+      itemBuilder: (context, index) {
+        return _buildDeniedRequestCard(requests[index]);
+      },
+    );
+  }
 
-Widget _buildDeniedRequestCard(dynamic deniedRequest) {
-  bool isLeaveRequest = deniedRequest.containsKey('request_type');
-  return Card(
-    margin: EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-    color: Color.fromARGB(255, 206, 236, 255),
-    child: Padding(
-      padding: EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              SizedBox(width: 16.0),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Text(
-                  //   deniedRequest['employee_name'],
-                  //   style: TextStyle(
-                  //     fontSize: 16.0,
-                  //     fontWeight: FontWeight.bold,
-                  //   ),
-                  // ),
-                  //Text(deniedRequest['designation']),
-                ],
-              ),
-              Spacer(),
-              Container(
-                padding: EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(8.0),
+  Widget _buildDeniedRequestCard(dynamic deniedRequest) {
+    bool isLeaveRequest = deniedRequest.containsKey('request_type');
+    return Card(
+      margin: EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+      color: Color.fromARGB(255, 206, 236, 255),
+      child: Padding(
+        padding: EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                SizedBox(width: 16.0),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      deniedRequest['employee_name'],
+                      style: TextStyle(
+                        fontSize: 16.0,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(deniedRequest['designation']),
+                  ],
                 ),
-                child: Text(
-                  'Denied',
+                Spacer(),
+                Container(
+                  padding: EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(8.0),
+                  ),
+                  child: Text(
+                    'Denied',
+                    style: TextStyle(
+                      color: const Color.fromARGB(255, 214, 122, 122),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 16.0),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('From Date'),
+                    Text(
+                      deniedRequest['date_from'],
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('To Date'),
+                    Text(
+                      deniedRequest['date_to'],
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isLeaveRequest
+                          ? deniedRequest['request_type']
+                          : 'WFH Request',
+                    ),
+                    Text(
+                      deniedRequest['no_of_days'],
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            SizedBox(height: 16.0),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Return to Office Date:'),
+                Text(
+                  deniedRequest['return_to_office'],
+                  textAlign: TextAlign.left,
                   style: TextStyle(
-                    color: const Color.fromARGB(255, 214, 122, 122),
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-              ),
-            ],
-          ),
-          SizedBox(height: 16.0),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('From Date'),
-                  Text(
-                    deniedRequest['date_from'],
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
+              ],
+            ),
+            SizedBox(height: 16.0),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Reason:'),
+                SizedBox(height: 4.0),
+                Text(
+                  deniedRequest['reason'],
+                  textAlign: TextAlign.left,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
                   ),
-                ],
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('To Date'),
-                  Text(
-                    deniedRequest['date_to'],
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    isLeaveRequest
-                        ? deniedRequest['request_type']
-                        : 'WFH Request',
-                  ),
-                  Text(
-                    deniedRequest['no_of_days'],
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          SizedBox(height: 16.0),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Return to Office Date:'),
-              Text(
-                deniedRequest['return_to_office'],
-                textAlign: TextAlign.left,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
                 ),
-              ),
-            ],
-          ),
-          SizedBox(height: 16.0),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Reason:'),
-              SizedBox(height: 4.0),
-              Text(
-                deniedRequest['reason'],
-                textAlign: TextAlign.left,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class PdfViewerPage extends StatelessWidget {

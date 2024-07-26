@@ -321,9 +321,9 @@ setState(() {
                         color: Colors.white),
                     child: DropdownButton<String>(
                         underline: Text(""),
-                        menuMaxHeight: 150,
+                        menuMaxHeight: 210,
                         isExpanded: true,
-                        borderRadius: BorderRadius.circular(25),
+                        borderRadius: BorderRadius.circular(20),
                         hint: Padding(
                             padding: EdgeInsets.fromLTRB(15, 0, 0, 0),
                             child: Text(
@@ -345,7 +345,7 @@ setState(() {
                                   style: GoogleFonts.getFont(
                                     'Lato',
                                     textStyle: TextStyle(
-                                      fontSize: 10,
+                                      fontSize: 12,
                                     ),
                                   ),
                                   overflow: TextOverflow.fade,
@@ -374,7 +374,7 @@ setState(() {
                     child: DropdownButton<String>(
                         underline: Text(""),
                         isExpanded: true,
-                        borderRadius: BorderRadius.circular(25),
+                        borderRadius: BorderRadius.circular(20),
                         hint: Padding(
                             padding: EdgeInsets.fromLTRB(15, 0, 0, 0),
                             child: Text(
@@ -397,7 +397,7 @@ setState(() {
                                   style: GoogleFonts.getFont(
                                     'Lato',
                                     textStyle: TextStyle(
-                                      fontSize: 11,
+                                      fontSize: 12,
                                     ),
                                   ),
                                 )))
@@ -1033,8 +1033,7 @@ setState(() {
                               setState(() {
                                 isLoading = !response;
                               });
-
-                              review.clear();
+                review.clear();
                               comment.clear();
 
                               if(response){

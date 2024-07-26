@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:bms/Screens/Activepage.dart';
 import 'package:bms/Screens/AddProject.dart';
+import 'package:bms/Screens/AttendenceReport.dart';
 import 'package:bms/Screens/DailyTasks.dart';
 import 'package:bms/Screens/Enquire.dart';
 import 'package:bms/Screens/NotActive.dart';
@@ -58,11 +59,9 @@ class LanderPageState extends State<LanderPage>
     onChange: (value) {
       final displayTime =
           StopWatchTimer.getDisplayTime(value, milliSecond: false);
-     
+      // print('Display Time: $displayTime');
     },
   );
-
-  int roleid=0;
 
   var backColor;
   late bool light;
@@ -72,8 +71,16 @@ class LanderPageState extends State<LanderPage>
   String profileUrl = "";
   Stopwatch _stopwatch = Stopwatch();
   String _elapsedTime = '';
+  int roleId=0;
   bool _isCheckingIn = true;
+  bool isLoading = false;
+  bool _isCheckingLocation = false;
+
   Future<Position> _determinePosition() async {
+    setState(() {
+      _isCheckingLocation = true; // Show Lottie animation
+    });
+
     List<kit.LatLng> poligonlatslongs = [
       kit.LatLng(18.5944166, 73.7917032),
       kit.LatLng(18.5942322, 73.7928545),
@@ -95,6 +102,10 @@ class LanderPageState extends State<LanderPage>
         backgroundColor: Colors.red,
       ));
 
+      setState(() {
+        _isCheckingLocation = false; // Hide Lottie animation
+      });
+
       return Future.error('Location services are disabled.');
     }
 
@@ -102,11 +113,17 @@ class LanderPageState extends State<LanderPage>
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
+        setState(() {
+          _isCheckingLocation = false; // Hide Lottie animation
+        });
         return Future.error('Location permissions are denied');
       }
     }
 
     if (permission == LocationPermission.deniedForever) {
+      setState(() {
+        _isCheckingLocation = false; // Hide Lottie animation
+      });
       return Future.error(
           'Location permissions are permanently denied, we cannot request permissions.');
     }
@@ -122,6 +139,7 @@ class LanderPageState extends State<LanderPage>
           kit.LatLng(position.latitude, position.longitude),
           poligonlatslongs,
           false);
+      _isCheckingLocation = false;
     });
 
     if (!checkLocation) {
@@ -220,7 +238,7 @@ class LanderPageState extends State<LanderPage>
     final pref = await SharedPreferences.getInstance();
 
     setState(() {
-      roleid=pref.getInt("role_id")??0;
+      roleId=pref.getInt("role_id")??0;
       profileUrl = pref.getString('profile_path') ?? "";
       if (pref.getInt('punch_Status') == 1) {
         backColor = Colors.greenAccent;
@@ -271,10 +289,10 @@ class LanderPageState extends State<LanderPage>
   late TabController tabController;
   @override
   void initState() {
-      fetchAttendanceData();
     startPolling();
     getPunched();
     ApiCalls.getDataofCards(1.toString());
+
     dataOfCards;
     _determinePosition();
     tabController = TabController(length: 7, vsync: this, initialIndex: 0);
@@ -369,7 +387,6 @@ class LanderPageState extends State<LanderPage>
   }
 
   Future<Map<String, dynamic>?> fetchAttendanceData() async {
-   
     try {
       final pref = await SharedPreferences.getInstance();
 
@@ -387,9 +404,8 @@ class LanderPageState extends State<LanderPage>
       if (responseAttendance.statusCode == 200) {
         var data = jsonDecode(responseAttendance.body);
 
-        if (data['punch_status'] == 0) {
-          print(data["data"].last["time"]);
-          String checkinTimeString = (data["data"].last["time"]);
+        if (pref.getString("chekinTime") != null && data['punch_status'] == 0) {
+          String checkinTimeString = pref.getString("chekinTime")!;
           DateTime checkinTime = DateTime(
             DateTime.now().year,
             DateTime.now().month,
@@ -425,24 +441,23 @@ class LanderPageState extends State<LanderPage>
     }
   }
 
-  Future<void> handlePunchInOut() async {
-
-
+  Future<int?> handlePunchInOut() async {
     try {
       final pref = await SharedPreferences.getInstance();
-print("${pref.getInt("punch_Status")}" +"Staus Here");
-      Uri url = Uri.parse('https://portalwiz.net/laravelapi/public/api/add_attendance?');
+
+      Uri url = Uri.parse(
+          'https://portalwiz.net/laravelapi/public/api/add_attendance?');
 
       var payload = {
         "account_id": pref.getInt('account_id').toString(),
         "user_id": pref.getInt('user_id').toString(),
-        "punch_status": "${pref.getInt('punch_Status')??0}"
+        "punch_status": pref.getInt('punch_Status').toString()
       };
 
       final response = await http.post(url, body: payload);
       var data = jsonDecode(response.body.toString());
 
-      if (!mounted) return;
+      if (!mounted) return null;
 
       if (data['success']) {
         pref.setString("chekinTime",
@@ -454,16 +469,20 @@ print("${pref.getInt("punch_Status")}" +"Staus Here");
         } else {
           _stopWatchTimer.onStopTimer();
           final workTime = StopWatchTimer.getDisplayTime(
-            _stopWatchTimer.rawTime.value,
-            milliSecond: false,
-          );
+              _stopWatchTimer.rawTime.value,
+              milliSecond: false);
           print('Total Work Time: $workTime');
         }
 
         pref.setInt('punch_Status', punchStatus == 0 ? 1 : 0);
+        return punchStatus == 0
+            ? 0
+            : 1; // Return 0 for check-in and 1 for check-out
+      } else {
+        return null;
       }
     } on PlatformException {
-      // Handle platform exceptions
+      return null;
     }
   }
 
@@ -489,6 +508,12 @@ print("${pref.getInt("punch_Status")}" +"Staus Here");
                   crossAxisAlignment: CrossAxisAlignment.center,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    if (_isCheckingLocation)
+                      SizedBox(
+                        width: 100,
+                        height: 100,
+                        child: Lottie.asset('asset/animation/empty.json'),
+                      ),
                     Text(
                       "Attendance",
                       style: GoogleFonts.lato(
@@ -536,7 +561,6 @@ print("${pref.getInt("punch_Status")}" +"Staus Here");
                                   style: TextStyle(fontSize: 18),
                                   textAlign: TextAlign.center,
                                 ),
-
                               SizedBox(height: 20),
                               Text(
                                 "Total in hours",
@@ -560,13 +584,6 @@ print("${pref.getInt("punch_Status")}" +"Staus Here");
                                   );
                                 },
                               ),
-                              //  SizedBox(height: 20),
-                              // Text(
-                              //   status == 0
-                              //       ? "You are currently checked in"
-                              //       : "You are currently checked out",
-                              //   style: TextStyle(fontSize: 18),
-                              // ),
                               SizedBox(height: 20),
                               ElevatedButton(
                                 onPressed: () async {
@@ -579,23 +596,21 @@ print("${pref.getInt("punch_Status")}" +"Staus Here");
                                   }
 
                                   if (checkLocation) {
-
-
-                                    await handlePunchInOut();
-                                    setState(() {
-                                      punch_Status = punch_Status.isEmpty
-                                          ? "Checked In"
-                                          : "";
-                                    });
-                                    
-     
+                                    int? punchStatus = await handlePunchInOut();
+                                    if (punchStatus != null) {
+                                      Navigator.of(dialogContext).pop();
+                                      showLottieAnimation(
+                                          punchStatus); // Replace with your Lottie animation method
+                                    } else {
+                                      print("Punch in/out failed");
+                                    }
                                   } else {
                                     _determinePosition();
                                     print("Sorry");
                                   }
                                 },
                                 child: Text(
-                                  (status == 1) ? "Check In" : "Check Out",
+                                  (status == 0) ? "Check Out" : "Check In",
                                   style: TextStyle(
                                       color: Colors.white, fontSize: 18),
                                 ),
@@ -604,9 +619,9 @@ print("${pref.getInt("punch_Status")}" +"Staus Here");
                                       horizontal: 35, vertical: 10),
                                   shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(8)),
-                                  backgroundColor: (status == 1)
-                                      ? Color.fromARGB(255, 76, 175, 172)
-                                      : Color.fromARGB(255, 230, 102, 102),
+                                  backgroundColor: (status == 0)
+                                      ? Color.fromARGB(255, 230, 102, 102)
+                                      : Color.fromARGB(255, 76, 175, 172),
                                 ),
                               ),
                             ],
@@ -619,6 +634,34 @@ print("${pref.getInt("punch_Status")}" +"Staus Here");
               ),
             );
           },
+        );
+      },
+    );
+  }
+
+  void showLottieAnimation(int punchStatus) {
+    String animationPath = punchStatus == 0
+        ? 'asset/animation/check_in.json'
+        : 'asset/animation/Animation - 1706007655831.json';
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Lottie.asset(
+            animationPath,
+            width: 200,
+            height: 200,
+            fit: BoxFit.cover,
+            repeat: false,
+            onLoaded: (composition) {
+              Future.delayed(Duration(seconds: composition.duration.inSeconds),
+                  () {
+                Navigator.of(context).pop();
+              });
+            },
+          ),
         );
       },
     );
@@ -665,29 +708,36 @@ print("${pref.getInt("punch_Status")}" +"Staus Here");
                 Navigator.pop(context);
               },
             ),
-            ListTile(
-              title: const Text("Gallery"),
-              leading: const Icon(Icons.picture_in_picture),
-              onTap: () {
-                Navigator.pop(context);
-              },
+
+            Visibility(
+              visible: roleId==1,
+              child: ListTile(
+                title: const Text("Projects"),
+                leading: const Icon(Icons.add_box),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ProjectManagementScreen(),
+                    ),
+                  );
+                },
+              ),
             ),
             ListTile(
-              title: const Text("Projects"),
-              leading: const Icon(Icons.add_box),
+              title: const Text("Attendence"),
+              leading: const Icon(Icons.edit_document),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ProjectScreen(),
-                  ),
-                );
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => AttendanceReportPage()));
               },
             ),
-
             Visibility(
-              visible: (roleid==1),
+              visible: (roleId==1),
               child: ListTile(
                 title: const Text("PM Sheet"),
                 leading: const Icon(Icons.manage_search),
@@ -696,19 +746,19 @@ print("${pref.getInt("punch_Status")}" +"Staus Here");
                   Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (context) => DailyTasks(title: "Data task",)));
+                          builder: (context) => ProjectManagerSheet(planid: null,)));
                 },
               ),
             ),
             ListTile(
-              title: const Text("Daily Tasks"),
-              leading: const Icon(Icons.task_sharp),
+              title: const Text("Daily plans"),
+              leading: const Icon(Icons.manage_search),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (context) => DailyTasks(title: "Tasks",)));
+                        builder: (context) => DailyTasks(title: "Daily PLans")));
               },
             ),
             // ListTile(
@@ -743,9 +793,9 @@ print("${pref.getInt("punch_Status")}" +"Staus Here");
               },
             ),
             Visibility(
-               visible: (roleid==1),
+              visible: roleId==1,
               child: ListTile(
-                title: const Text("Leave Requests "),
+                title: const Text("Leave Tracker "),
                 leading: const Icon(Icons.work),
                 onTap: () {
                   Navigator.pop(context);
@@ -755,7 +805,7 @@ print("${pref.getInt("punch_Status")}" +"Staus Here");
               ),
             ),
             ListTile(
-              title: const Text("Leave Tracker "),
+              title: const Text("Leave Requests "),
               leading: const Icon(Icons.work),
               onTap: () {
                 Navigator.pop(context);

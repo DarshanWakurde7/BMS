@@ -53,6 +53,10 @@ class _DailyTasksState extends State<DailyTasks> {
   Future<void> listTodo() async {
     try {
       SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
+
+      setState(() {
+        roleId=sharedPreferences.getInt("role_id")??0;
+      });
   
       final Map<String, dynamic> requestBody = {
     "plan_date": "${_selectedValue.year}-${_selectedValue.month.toString().padLeft(2, '0')}-${_selectedValue.day.toString().padLeft(2, '0')}",
@@ -67,7 +71,7 @@ class _DailyTasksState extends State<DailyTasks> {
 
 print(requestBody);
   // Prepare the URL
-  var url = Uri.parse('https://pw-bms-dev.portalwiz.in/laravelapi/public/api/fetch_daily_plan');
+  var url = Uri.parse('https://portalwiz.net/laravelapi/public/api/fetch_daily_plan');
 
   // Perform the POST request
   final response = await http.post(
@@ -107,11 +111,13 @@ print(requestBody);
       }
     }
   }
-
  Future<bool> fetchTeamEmployees(int teamId) async {
+  setState(() {
+      _employeeList.clear();
+  });
     SharedPreferences prefs = await SharedPreferences.getInstance();
     try {
-      var url = Uri.parse('https://pw-bms-dev.portalwiz.in/laravelapi/public/api/fetch_team_employee');
+      var url = Uri.parse('https://portalwiz.net/laravelapi/public/api/fetch_team_employee');
 
       // API request
       final response = await http.post(
@@ -122,24 +128,19 @@ print(requestBody);
         body: jsonEncode({
           "team_id": [teamId],
           "account_id": "${prefs.getInt("account_id")}",
-          "user_id":["${prefs.getInt("user_id")}"]
+          "user_id": ["${prefs.getInt("user_id")}"]
         }),
       );
-    
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         List<Map<String, dynamic>> employees = List<Map<String, dynamic>>.from(data);
+        setState(() {
         
-        if (mounted) {
-          setState(() {
-            _employeeList = jsonDecode(response.body);
-       
-          });
+          _employeeList.addAll(employees);
+        });
 
-         
-      
-        }
+        print("Employee List: $_employeeList"); // Debug: Print the employee list
         return true;
       } else {
         print('Failed to fetch employees. Status code: ${response.statusCode}');
@@ -158,7 +159,7 @@ print(requestBody);
     if (!(userId == null)) {
       try {
         final response = await http.post(
-          Uri.parse('https://pw-bms-dev.portalwiz.in/laravelapi/public/api/fetch_teams'),
+          Uri.parse('https://portalwiz.net/laravelapi/public/api/fetch_teams'),
           body: {"user_id": "$userId", "role_id": "${prefs.getInt("role_id")}"},
         );
         print({"user_id": "$userId", "role_id": "${prefs.getInt("role_id")}"});
@@ -220,60 +221,62 @@ print(requestBody);
               style: TextStyle(color: Colors.grey),
             ),
           ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-               Expanded(
-                 child: DropdownButton<String>(
-                  isExpanded: true,
-                  elevation: 12,
-                  underline: Text(""),
-                  hint: Text(valueofTeam,style: TextStyle(color: Colors.black),textAlign: TextAlign.center,),
-                  
-                    items: _teamsList.map((e) {
-                      return DropdownMenuItem<String>(
-                        value: e["team_name"],
-                        child: Text(e["team_name"]),
-                      );
-                    }).toList(),
-                    onChanged: (String? newValue) async {
-                      var data = _teamsList.firstWhere(
-                        (employee) => employee['team_name'].toString() == newValue,
-                      );
-                      fetchTeamEmployees(data["team_id"]);
-                      setState(() {
-                        _selectedTeam=data["team_id"];
-                        valueofTeam=newValue??"";
-                      });
-                    },
-                               
-                               ),
-               ),
-              Visibility(
-                visible: !(_employeeList.length==0),
-                child: Container(
-                  height: 50,
-                  width: 200,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12)
-                  ),
-                  child: MultiSelectDropDown(
-                    onOptionSelected: (val) {
-                      setState(() {
-                        _selectedEmployee = val;
-                      });
-                      listTodo();
-                    },
-                    options: (_employeeList).map((e) {
-                      return ValueItem<dynamic>(
-                        label: e["first_name"] + " " + e["last_name"],
-                        value: e["user_id"],
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ),
-            ],
+          Visibility(
+              visible: (roleId==1),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                 Expanded(
+                   child: DropdownButton<String>(
+                    isExpanded: true,
+                    elevation: 12,
+                    underline: Text(""),
+                    hint: Text(valueofTeam,style: TextStyle(color: Colors.black),textAlign: TextAlign.center,),
+                    
+                      items: _teamsList.map((e) {
+                        return DropdownMenuItem<String>(
+                          value: e["team_name"],
+                          child: Text(e["team_name"]),
+                        );
+                      }).toList(),
+                      onChanged: (String? newValue) async {
+                        var data = _teamsList.firstWhere(
+                          (employee) => employee['team_name'].toString() == newValue,
+                        );
+                         fetchTeamEmployees(data["team_id"]);
+                          setState(() {
+                          _selectedTeam=data["team_id"];
+                          valueofTeam=newValue??"";
+                          _employeeList;
+                        });
+                       
+                        print(data["team_id"]);
+                      
+                      },
+                                 
+                                 ),
+                 ),
+                Visibility(
+                  visible: _employeeList.isNotEmpty,
+                  child: Container(
+                    height: 50,
+                    width: 200,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: MultiSelectDropDown(
+                      onOptionSelected: (val) {
+                        setState(() {
+                          _selectedEmployee = val;
+                        });
+                        listTodo(); // Ensure to refresh the task list
+                      },
+                      options: _employeeList.map((e) => ValueItem(label: e["first_name"] + " " + e["last_name"], value: e["user_id"])).toList(),
+                      selectedOptions: _selectedEmployee ?? [],
+                    
+                    ),),)
+              ],
+            ),
           ),
      Expanded(
         child: isLoading
@@ -301,17 +304,23 @@ print(requestBody);
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Padding(
-                                      padding: const EdgeInsets.only(left: 15.0, top: 5),
-                                      child: Text(
-                                        "${filteredList[index].planDate}",
-                                        style: TextStyle(
-                                            color: Colors.grey.shade600,
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 12),
+                                    // Padding(
+                                    //   padding: const EdgeInsets.only(left: 15.0, top: 5),
+                                    //   child: Text(
+                                    //     "${filteredList[index].planDate}",
+                                    //     style: TextStyle(
+                                    //         color: Colors.grey.shade600,
+                                    //         fontWeight: FontWeight.w600,
+                                    //         fontSize: 12),
+                                    //   ),
+                                    // ),
+
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                                        child: Text(_teamsList.firstWhere((e)=>e["team_id"]==filteredList[index].teamId)["team_name"],style: TextStyle(color: Colors.blueAccent),),
                                       ),
-                                    ),
-                                    Visibility(
+
+                                       Visibility(
                                       visible: (filteredList[index].status == 1),
                                       child: Padding(
                                         padding: const EdgeInsets.only(right: 10.0, top: 5),
@@ -322,18 +331,34 @@ print(requestBody);
                                         ),
                                       ),
                                     ),
+                                     
                                   ],
                                 ),
                               ),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8),
-                                child: Text(
-                                  "${filteredList[index].userName}",
-                                  style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600),
-                                ),
+                              Row(
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 5),
+                                    child: Text(
+                                      "${filteredList[index].userName}",
+                                      style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
+                                       Visibility(
+                                      visible: (filteredList[index].status == 1),
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(right: 10.0, top: 5),
+                                        child: Icon(
+                                          Icons.verified_sharp,
+                                          size: 24,
+                                          color: Colors.blueAccent,
+                                        ),
+                                      ),
+                                    ),
+                                ],
                               ),
                               Container(
                                 
@@ -344,23 +369,26 @@ print(requestBody);
                                 child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    CircleAvatar(radius: 7,child: Icon(Icons.check,color: Colors.white,size: 10,),backgroundColor: Colors.green,),
+                                 
                                    SizedBox(width: 5,),
-                                    Text(
-                                        filteredList[index].planName.toString(),
-                                        style: TextStyle(color: Colors.black),
-                                      ),
+                                    Expanded(
+                                      child: Text(
+                                          filteredList[index].planName.toString(),
+                                          style: TextStyle(color: Colors.black),
+                                        ),
+                                    ),
                                   
                                   ],
                                 ),
                               ),
                               Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Padding(
                                     padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                                    child: Text("Achievements...",
+                                    child: Text("Achievements",
                                         style: TextStyle(
-                                            color: Colors.black, fontWeight: FontWeight.w500)),
+                                            color: Colors.black, fontWeight: FontWeight.w600)),
                                   ),
                                   Visibility(
                                     visible: (filteredList[index].achievements == null || filteredList[index].achievements!.isEmpty),
@@ -386,6 +414,10 @@ print(requestBody);
                                                     ),
                                                   ),
                                                   ElevatedButton(
+
+
+
+
                                                     onPressed: () {
                                                       updateplan(
                                                         filteredList[index].planId ?? 0,
@@ -410,32 +442,37 @@ print(requestBody);
                                   )
                                 ],
                               ),
-                              Container(
-                                margin: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                decoration: BoxDecoration(
-                                    border: Border.all(color: Colors.grey.shade400),
-                                    borderRadius: BorderRadius.circular(11)),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Padding(
-                                      padding: EdgeInsets.all(5),
-                                      child: Text(
-                                        filteredList[index].achievements ?? " ......",
-                                        style: TextStyle(color: Colors.black),
+                              Visibility(
+                                visible: !(filteredList[index].achievements==null),
+                                child: Container(
+                                  margin: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                  decoration: BoxDecoration(
+                                      border: Border.all(color: Colors.grey.shade400),
+                                      borderRadius: BorderRadius.circular(11)),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Padding(
+                                        padding: EdgeInsets.all(5),
+                                        child: Text(
+                                          filteredList[index].achievements ?? " ......",
+                                          style: TextStyle(color: Colors.black),
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ),
+                              SizedBox(height: 3,),
                               Padding(
                                 padding: const EdgeInsets.symmetric(vertical: 5.0),
                                 child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     Padding(
                                       padding: const EdgeInsets.symmetric(horizontal: 12.0,),
-                                      child: Text("Comment:",
+                                      child: Text("Comments:",
                                           style: TextStyle(
                                               color: Colors.black, fontWeight: FontWeight.w600)),
                                     ),
@@ -487,6 +524,7 @@ print(requestBody);
                                   ],
                                 ),
                               ),
+                               SizedBox(height: 3,),
                               Visibility(
                                 visible: (roleId == 1),
                                 child: Row(
@@ -523,7 +561,7 @@ print(requestBody);
         foregroundColor: Colors.blueAccent.shade200,
         onPressed: (){
 
-         (roleId==1)? Navigator.push(context, MaterialPageRoute(builder: (context)=>ProjectManagerSheet(planid: null))):Navigator.push(context, MaterialPageRoute(builder: (context)=>AddPlanUser()));
+         (roleId==1)? Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>ProjectManagerSheet(planid: null))):Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>AddPlanUser()));
 
       },child: Icon(Icons.add,color: Colors.black,),),
     );

@@ -604,7 +604,7 @@ class _MyEnquireState extends State<MyEnquire> {
                             "",
                         func: () {},
                         id: enquireCardsController.enquiredata[ind].enquiryId ??
-                            0,
+                            0, data: ["https://images.rawpixel.com/image_png_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvam9iNjgwLTE2Ni1wLWwxZGJ1cTN2LnBuZw.png","https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ8lF2jbNFBy7X4D6F43tRiCxG2oRWLP9v8LQ&s","https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRg3BKJze6R0JDL8tDLjFXhFZpIFBeXWealSQ&s"],
                       ),
                     ),
                   );

@@ -604,7 +604,11 @@ class AddTaskState extends State<AddTask> {
                           padding: const EdgeInsets.all(5),
                           child: GetDatePicker(
                             getselectedate: esStart,
-                            getexacttime: (date) {},
+                            getexacttime: (date) {
+                              setState(() {
+                                    esStart=date;
+                              });
+                            },
                           )),
                       Padding(
                           padding: const EdgeInsets.all(5),

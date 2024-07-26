@@ -81,7 +81,7 @@ class _AddPlanUserState extends State<AddPlanUser> {
     if (userId != null) {
       try {
         final response = await http.post(
-          Uri.parse('https://pw-bms-dev.portalwiz.in/laravelapi/public/api/fetch_teams'),
+          Uri.parse('https://portalwiz.net/laravelapi/public/api/fetch_teams'),
           body: {"user_id": "$userId", "role_id": "${prefs.getInt("role_id")}"},
         );
         print(response.body);

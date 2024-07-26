@@ -31,8 +31,8 @@ List<CollaboratorsDropdown> collboraotrs=[];
 List<TimeSheetPojo> timeSheet = [];
 
 class ApiCalls {
-  // static String baseurl="https://pw-bms-dev.portalwiz.in/laravelapi/public/api/";
-  static String baseurl = "https://portalwiz.net/laravelapi/public/api/";
+  static String baseurl="https://pw-bms-dev.portalwiz.in/laravelapi/public/api/";
+  // static String baseurl = "https://portalwiz.net/laravelapi/public/api/";
 
   static Future<dynamic> getDataofCards(String status_id) async {
     dataOfCards.clear();
@@ -752,82 +752,110 @@ static Future<void> getCollborators(int accid, int projectid) async {
   }
 
   static Future<List<LeaveHistory>> fetchSingleEmployeeLeave() async {
-    final response = await http.post(
-      Uri.parse(
-          'https://pw-bms-dev.portalwiz.in/laravelapi/public/api/fetch_single_employee_leave'),
-      headers: <String, String>{
-        'Content-Type': 'application/json; charset=UTF-8',
-      },
-      body: jsonEncode(<String, dynamic>{
-        'account_id': '1',
-        'employee_id': 1,
-      }),
-    );
-
-    if (response.statusCode == 200) {
-      List jsonResponse = json.decode(response.body);
+    try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
-      List<String> requestTypeIds = [];
-      for (var leave in jsonResponse) {
-        requestTypeIds.add(leave['request_type_id'].toString());
+      String? employeeId = prefs.getString('employee_id');
+
+      if (employeeId == null) {
+        throw Exception('Employee ID not found in SharedPreferences');
       }
-      prefs.setStringList('request_type_ids', requestTypeIds);
 
-      return jsonResponse.map((leave) => LeaveHistory.fromJson(leave)).toList();
-    } else {
-      throw Exception('Failed to load leave history');
+      final response = await http.post(
+        Uri.parse(
+            'https://pw-bms-dev.portalwiz.in/laravelapi/public/api/fetch_single_employee_leave'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: jsonEncode(<String, dynamic>{
+          'account_id': '1100',
+          'employee_id': int.parse(employeeId),
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        List jsonResponse = json.decode(response.body);
+        List<String> requestTypeIds = [];
+        for (var leave in jsonResponse) {
+          requestTypeIds.add(leave['request_type_id'].toString());
+        }
+        await prefs.setStringList('request_type_ids', requestTypeIds);
+
+        return jsonResponse
+            .map((leave) => LeaveHistory.fromJson(leave))
+            .toList();
+      } else {
+        throw Exception('Failed to load leave history');
+      }
+    } catch (e) {
+      throw Exception('Failed to load leave history: $e');
     }
   }
 
-  static Future<Map<String, dynamic>> fetchTotalLeaves() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    List<String> requestTypeIds = prefs.getStringList('request_type_ids') ?? [];
+  // static Future<Map<String, dynamic>> fetchTotalLeaves() async {
+  //   SharedPreferences prefs = await SharedPreferences.getInstance();
+  //   List<String> requestTypeIds = prefs.getStringList('request_type_ids') ?? [];
 
-    final response = await http.post(
-      Uri.parse(
-          'https://pw-bms-dev.portalwiz.in/laravelapi/public/api/fetch_total_leaves'),
-      headers: <String, String>{
-        'Content-Type': 'application/json; charset=UTF-8',
-      },
-      body: jsonEncode(<String, dynamic>{
-        'account_id': '1',
-        'employee_id': 2,
-        'request_type_id':
-            requestTypeIds.isNotEmpty ? requestTypeIds.last : '0',
-      }),
-    );
+  //   final response = await http.post(
+  //     Uri.parse(
+  //         'https://pw-bms-dev.portalwiz.in/laravelapi/public/api/fetch_total_leaves'),
+  //     headers: <String, String>{
+  //       'Content-Type': 'application/json; charset=UTF-8',
+  //     },
+  //     body: jsonEncode(<String, dynamic>{
+  //       'account_id': '1',
+  //       'employee_id': 2,
+  //       'request_type_id':
+  //           requestTypeIds.isNotEmpty ? requestTypeIds.last : '0',
+  //     }),
+  //   );
 
-    if (response.statusCode == 200) {
-      Map<String, dynamic> responseData = json.decode(response.body);
+  //   if (response.statusCode == 200) {
+  //     Map<String, dynamic> responseData = json.decode(response.body);
 
-      return responseData;
-    } else {
-      throw Exception('Failed to load total leaves');
-    }
-  }
+  //     return responseData;
+  //   } else {
+  //     throw Exception('Failed to load total leaves');
+  //   }
+  // }
 
   static Future<void> updateLeaveStatus(
       String leaveId, String leaveStatusId, String comment) async {
-    final response = await http.post(
-      Uri.parse(
-          'https://pw-bms-dev.portalwiz.in/laravelapi/public/api/update_leave'),
-      headers: <String, String>{
-        'Content-Type': 'application/json; charset=UTF-8',
-      },
-      body: jsonEncode(<String, dynamic>{
-        'account_id': '1',
-        'leave_id': leaveId,
-        'employee_id': '1',
-        'leave_status_id': leaveStatusId,
-        'comment': comment,
-        'updated_by': 1,
-      }),
-    );
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? employeeId = prefs.getString('employee_id');
+      int? userId = prefs.getInt('user_id');
 
-    if (response.statusCode == 200) {
-      print('Leave status updated!');
-    } else {
-      throw Exception('Failed to update leave status');
+      if (employeeId == null) {
+        throw Exception('Employee ID not found in SharedPreferences');
+      }
+
+      if (userId == null) {
+        throw Exception('User ID not found in SharedPreferences');
+      }
+
+      final response = await http.post(
+        Uri.parse(
+            'https://pw-bms-dev.portalwiz.in/laravelapi/public/api/update_leave'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: jsonEncode(<String, dynamic>{
+          'account_id': '1',
+          'leave_id': leaveId,
+          'employee_id': int.parse(employeeId),
+          'leave_status_id': leaveStatusId,
+          'comment': comment,
+          'updated_by': userId,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        print('Leave status updated!');
+      } else {
+        throw Exception('Failed to update leave status');
+      }
+    } catch (e) {
+      throw Exception('Failed to update leave status: $e');
     }
   }
 
@@ -861,9 +889,12 @@ static Future<void> getCollborators(int accid, int projectid) async {
     );
 
     if (response.statusCode == 200) {
-      print(jsonDecode(response.body)['message']);
+      print('Work from home request submitted successfully.');
+      print('Response: ${jsonDecode(response.body)}');
     } else {
       print('Failed to submit work from home request');
+      print('Status code: ${response.statusCode}');
+      print('Response: ${response.body}');
     }
   }
 
@@ -887,22 +918,34 @@ static Future<void> getCollborators(int accid, int projectid) async {
   }
 
   static Future<List<WfhHistory>> fetchSingleEmployeeWFH() async {
-    final response = await http.post(
-      Uri.parse(
-          'https://pw-bms-dev.portalwiz.in/laravelapi/public/api/fetch_single_employee_wfh'),
-      headers: <String, String>{
-        'Content-Type': 'application/json; charset=UTF-8',
-      },
-      body: jsonEncode(<String, String>{
-        'account_id': '1',
-        'employee_id': '4',
-      }),
-    );
-    if (response.statusCode == 200) {
-      return List<WfhHistory>.from(
-          jsonDecode(response.body).map((x) => WfhHistory.fromJson(x)));
-    } else {
-      throw Exception('Failed to load WFH history');
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? employeeId = prefs.getString('employee_id');
+
+      if (employeeId == null) {
+        throw Exception('Employee ID not found in SharedPreferences');
+      }
+
+      final response = await http.post(
+        Uri.parse(
+            'https://pw-bms-dev.portalwiz.in/laravelapi/public/api/fetch_single_employee_wfh'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: jsonEncode(<String, dynamic>{
+          'account_id': '1',
+          'employee_id': int.parse(employeeId),
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        List<dynamic> jsonResponse = json.decode(response.body);
+        return jsonResponse.map((x) => WfhHistory.fromJson(x)).toList();
+      } else {
+        throw Exception('Failed to load WFH history');
+      }
+    } catch (e) {
+      throw Exception('Failed to load WFH history: $e');
     }
   }
 
@@ -972,9 +1015,20 @@ static Future<void> getCollborators(int accid, int projectid) async {
     final headers = {
       'Content-Type': 'application/json',
     };
-    final body = {"account_id": 1, "employee_id": 4};
 
     try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? employeeId = prefs.getString('employee_id');
+
+      if (employeeId == null) {
+        throw Exception('Employee ID not found in SharedPreferences');
+      }
+
+      final body = {
+        "account_id": 1,
+        "employee_id": int.parse(employeeId),
+      };
+
       final response = await http.post(
         Uri.parse(url),
         headers: headers,
@@ -997,9 +1051,20 @@ static Future<void> getCollborators(int accid, int projectid) async {
     final headers = {
       'Content-Type': 'application/json',
     };
-    final body = {"account_id": 1, "employee_id": 4};
 
     try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? employeeId = prefs.getString('employee_id');
+
+      if (employeeId == null) {
+        throw Exception('Employee ID not found in SharedPreferences');
+      }
+
+      final body = {
+        "account_id": 1,
+        "employee_id": int.parse(employeeId),
+      };
+
       final response = await http.post(
         Uri.parse(url),
         headers: headers,
@@ -1022,9 +1087,20 @@ static Future<void> getCollborators(int accid, int projectid) async {
     final headers = {
       'Content-Type': 'application/json',
     };
-    final body = {"account_id": 1, "employee_id": 4};
 
     try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? employeeId = prefs.getString('employee_id');
+
+      if (employeeId == null) {
+        throw Exception('Employee ID not found in SharedPreferences');
+      }
+
+      final body = {
+        "account_id": 1,
+        "employee_id": int.parse(employeeId), // Convert employee_id to integer
+      };
+
       final response = await http.post(
         Uri.parse(url),
         headers: headers,
@@ -1259,7 +1335,7 @@ static Future<void> getCollborators(int accid, int projectid) async {
       
     final response = await http.post(
       Uri.parse(
-          'https://pw-bms-dev.portalwiz.in/laravelapi/public/api/add_daily_plan'),
+          'https://portalwiz.net/laravelapi/public/api/add_daily_plan'),
       body: planData,
     ); print(response.body);
    
@@ -1274,7 +1350,7 @@ static Future<void> getCollborators(int accid, int projectid) async {
   static Future<bool> updateDailyplan(Map<String, dynamic> planData) async {
     final response = await http.post(
       Uri.parse(
-          'https://pw-bms-dev.portalwiz.in/laravelapi/public/api/update_daily_plan'),
+          'https://portalwiz.net/laravelapi/public/api/update_daily_plan'),
  
       body: planData,
     );
@@ -1290,7 +1366,7 @@ static Future<void> getCollborators(int accid, int projectid) async {
   static Future<bool> addTaskData(Map<String, dynamic> planData) async {
     final response = await http.post(
       Uri.parse(
-          'https://pw-bms-dev.portalwiz.in/laravelapi/public/api/update_daily_plan'),
+          'https://portalwiz.net/laravelapi/public/api/update_daily_plan'),
  
       body: planData,
     );
@@ -1301,6 +1377,73 @@ static Future<void> getCollborators(int accid, int projectid) async {
       return responseBody['success'];
     } else {
       throw Exception('Failed to insert data');
+    }
+  }
+
+  static Future<void> fetchAndStoreEmployeeId(
+      int userId, String accountId) async {
+    try {
+      final response = await http.post(
+        Uri.parse(
+            'https://portalwiz.net/laravelapi/public/api/fetch_employees'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: jsonEncode(<String, dynamic>{
+          'account_id': accountId,
+          'user_id': userId,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final responseBody = json.decode(response.body);
+        final employee = responseBody['users'].firstWhere(
+          (user) => user['user_id'] == userId,
+          orElse: () => null,
+        );
+
+        if (employee != null) {
+          final String employeeId = employee['employee_id'].toString();
+          SharedPreferences prefs = await SharedPreferences.getInstance();
+          await prefs.setString('employee_id', employeeId);
+          print('Employee ID stored: $employeeId');
+        } else {
+          print('Employee not found for user ID: $userId');
+        }
+      } else {
+        print('Failed to fetch employees, status code: ${response.statusCode}');
+        throw Exception('Failed to fetch employees');
+      }
+    } catch (e) {
+      print('Error in fetchAndStoreEmployeeId: $e');
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> fetchAttendance(
+      DateTime date) async {
+    final response = await http.post(
+      Uri.parse(
+          'https://portalwiz.net/laravelapi/public/api/fetch_all_attendance'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'account_id': '1100'}),
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      final String formattedDate =
+          "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+
+      return data
+          .where((item) => item['created_at'].startsWith(formattedDate))
+          .map((item) {
+        return {
+          'username': item['user_name'],
+          'punchStatus': item['punch_status'],
+          'punchTime': item['time'],
+        };
+      }).toList();
+    } else {
+      throw Exception('Failed to load attendance data');
     }
   }
 }

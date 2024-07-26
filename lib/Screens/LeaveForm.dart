@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:bms/ApiCalls/apiCalls.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LeaveForm extends StatefulWidget {
   @override
@@ -30,22 +31,33 @@ class _LeaveFormState extends State<LeaveForm> {
 
   Future<void> _submitLeaveRequest() async {
     try {
-      print('File Path: $_filePath');
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? employeeIdStr = prefs.getString('employee_id');
+      int? userIdStr = prefs.getInt('user_id');
+
+      if (employeeIdStr == null || userIdStr == null) {
+        throw Exception(
+            'Employee ID or User ID not found in SharedPreferences');
+      }
+
+      final int employeeId = int.parse(employeeIdStr);
+
+      final noOfDays = _toDate.difference(_fromDate).inDays + 1;
 
       await ApiCalls.addLeave(
-        accountId: 1,
-        employeeId: 1,
+        accountId: 1100,
+        employeeId: employeeId,
         requestTypeId: _selectedLeaveType == 'Casual'
             ? 2
             : _selectedLeaveType == 'Sick'
                 ? 1
                 : 3,
-        noOfDays: _toDate.difference(_fromDate).inDays + 1,
+        noOfDays: noOfDays,
         reason: _reason,
         dateFrom: _fromDate.toString().split(' ')[0],
         dateTo: _toDate.toString().split(' ')[0],
         returnToOffice: _returnDate.toString().split(' ')[0],
-        createdBy: 1,
+        createdBy: employeeId,
         attachment: _filePath ?? '',
       );
 
