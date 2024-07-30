@@ -22,6 +22,8 @@ class _AddPlanUserState extends State<AddPlanUser> {
   List<Map<String, dynamic>> _employeeList = [];
   List<dynamic> _teamsList = [];
     int? _selectedTeam;
+      // static String baseurl="https://pw-bms-dev.portalwiz.in/laravelapi/public/api";
+  static String baseurl = "https://portalwiz.net/laravelapi/public/api";
   @override
   void initState() {
     super.initState();
@@ -81,7 +83,7 @@ class _AddPlanUserState extends State<AddPlanUser> {
     if (userId != null) {
       try {
         final response = await http.post(
-          Uri.parse('https://portalwiz.net/laravelapi/public/api/fetch_teams'),
+          Uri.parse('$baseurl/fetch_teams'),
           body: {"user_id": "$userId", "role_id": "${prefs.getInt("role_id")}"},
         );
         print(response.body);

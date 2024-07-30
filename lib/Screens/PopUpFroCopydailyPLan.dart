@@ -5,15 +5,15 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 
-class ProjectManagerSheet extends StatefulWidget {
-   ProjectManagerSheet({required this.planid,required this.updateList});
+class ProjectManagerPopup extends StatefulWidget {
+  const ProjectManagerPopup({required this.planid});
   final int? planid;
-  Function updateList;
+
   @override
-  _ProjectManagerSheetState createState() => _ProjectManagerSheetState();
+  _ProjectManagerPopupState createState() => _ProjectManagerPopupState();
 }
 
-class _ProjectManagerSheetState extends State<ProjectManagerSheet> {
+class _ProjectManagerPopupState extends State<ProjectManagerPopup> {
   DateTime _selectedDate = DateTime.now();
   String? _selectedEmployee;
   TextEditingController _entryController = TextEditingController();
@@ -60,7 +60,7 @@ Future<void> fetchPlan() async {
           bool functionData = await fetchTeamEmployees(data['team_id']);
 
           setState(() {
-            _selectedDate = data['plan_date'] != null ? DateTime.parse(data['plan_date']) : DateTime.now();
+            _selectedDate = data['plan_date'] != null ? DateTime.parse(data['plan_date']).add(Duration(days: 1)) : DateTime.now();
             _entryController.text = data['plan_name'] ?? "";
             _isPlanCompleted = data['status'] == 1;
             _selectedTeam = data['team_id'];
@@ -69,11 +69,11 @@ Future<void> fetchPlan() async {
               try {
                 final selectedEmployee = _employeeList.firstWhere(
                   (employee) => employee['user_id'].toString() == data['user_id'].toString(),
-                  orElse: () => null,
+                  
                 );
                 _selectedEmployee = selectedEmployee != null
                     ? '${selectedEmployee['first_name']} ${selectedEmployee['last_name']}'
-                    : null;
+                    : "No EMp";
               } catch (e) {
                 print('Employee not found: $e');
                 _selectedEmployee = null;
@@ -119,7 +119,7 @@ Future<void> fetchPlan() async {
         List<Map<String, dynamic>> employees = List<Map<String, dynamic>>.from(data);
         
         if (mounted) {
-          setState(() {addOrUpdateDailyPlan();
+          setState(() {
             _employeeList = jsonDecode(response.body);
        
           });
@@ -197,21 +197,11 @@ Future<void> fetchPlan() async {
 
     try {
       bool success;
-      if (widget.planid != null) {
-        final updateResponse = await http.post(
-          Uri.parse('${baseurl}/update_daily_plan'),
-          body: requestBody,
-        );
-        success = updateResponse.statusCode == 200;
-        print(updateResponse.body);
-      } else {
-        print(requestBody);
+  
         success = await ApiCalls.addDailyPlan(requestBody);
-      }
+      
 
       if (success) {
-        widget.updateList();
-        Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Data submitted successfully.')),
         );
@@ -236,11 +226,7 @@ Future<void> fetchPlan() async {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Project Manager Sheet'),
-      ),
-      body: SingleChildScrollView(
+    return  SingleChildScrollView(
         child: Center(
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -305,17 +291,8 @@ Future<void> fetchPlan() async {
                           ),
                         ),
                         SizedBox(width: 16.0),
-                        IconButton(
-                          icon: Icon(Icons.copy, color: Colors.blue),
-                          onPressed: () {},
-                        ),
-                        Text(
-                          'Copy Plan',
-                          style: TextStyle(
-                            color: Colors.blue,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                     
+                       
                       ],
                     ),
                     SizedBox(height: 16.0),
@@ -400,7 +377,7 @@ Future<void> fetchPlan() async {
             ),
           ),
         ),
-      ),
-    );
+      );
+    
   }
 }

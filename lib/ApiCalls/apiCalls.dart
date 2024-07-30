@@ -31,8 +31,8 @@ List<CollaboratorsDropdown> collboraotrs=[];
 List<TimeSheetPojo> timeSheet = [];
 
 class ApiCalls {
-  static String baseurl="https://pw-bms-dev.portalwiz.in/laravelapi/public/api/";
-  // static String baseurl = "https://portalwiz.net/laravelapi/public/api/";
+  // static String baseurl="https://pw-bms-dev.portalwiz.in/laravelapi/public/api/";
+  static String baseurl = "https://portalwiz.net/laravelapi/public/api/";
 
   static Future<dynamic> getDataofCards(String status_id) async {
     dataOfCards.clear();
@@ -615,6 +615,196 @@ static Future<void> getCollborators(int accid, int projectid) async {
     } catch (e) {
       print(e);
       return enquireComment;
+    }
+  }
+
+
+
+  static Future<List<dynamic>> fetchProjects(int statusGroupId) async {
+    final sharedPref = await SharedPreferences.getInstance();
+    int? userId = sharedPref.getInt('user_id');
+    int? accountId = sharedPref.getInt('account_id');
+
+    if (userId == null || accountId == null) {
+      throw Exception('User ID or Account ID not found in Shared Preferences');
+    }
+
+    Uri uri = Uri.parse('${baseurl}fetch_projects');
+    var body = jsonEncode({
+      'user_id': userId,
+      'account_id': accountId,
+      'status_group_id': statusGroupId
+    });
+
+    final response = await http.post(uri, body: body, headers: {
+      'Content-Type': 'application/json',
+    });
+
+    if (response.statusCode == 200) {
+      List<dynamic> data = jsonDecode(response.body);
+      return data;
+    } else {
+      throw Exception('Failed to load projects');
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> fetchEmployees(
+      String accountId) async {
+    final response = await http.post(
+      Uri.parse(
+          '${baseurl}/fetch_account_employee'),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: jsonEncode(<String, String>{
+        'account_id': accountId,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      List<dynamic> data = jsonDecode(response.body);
+      List<Map<String, dynamic>> employees = [];
+      data.forEach((employee) {
+        employees.add({
+          'first_name': employee['first_name'],
+          'last_name': employee['last_name'],
+          'user_id': employee['user_id'],
+        });
+      });
+      return employees;
+    } else {
+      throw Exception('Failed to fetch employees');
+    }
+  }
+
+  static Future<bool> addDailyPlan(Map<String, dynamic> planData) async {
+      
+    final response = await http.post(
+      Uri.parse(
+          '${baseurl}add_daily_plan'),
+      body: planData,
+    ); print(response.body);
+   
+    if (response.statusCode == 200) {
+      final responseBody = json.decode(response.body);
+
+      return responseBody['success'];
+    } else {
+      throw Exception('Failed to insert data');
+    }
+  }
+
+
+
+static Future<bool> updateDailyPlan(Map<String, dynamic> planData) async {
+  try {
+    final response = await http.post(
+      Uri.parse('${baseurl}update_daily_plan'),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(planData),
+    );
+
+    if (response.statusCode == 200) {
+      final responseBody = json.decode(response.body);
+      print('Response Body: $responseBody');
+      return responseBody['success'];
+    } else {
+      print('Failed to update data. Status code: ${response.statusCode}');
+      print('Response Body: ${response.body}');
+      return false;
+    }
+  } catch (error) {
+    print('Error occurred: $error');
+    throw Exception('Failed to update data: $error');
+  }
+}
+
+
+
+
+  static Future<bool> addTaskData(Map<String, dynamic> planData) async {
+    final response = await http.post(
+      Uri.parse(
+          '${baseurl}/update_daily_plan'),
+ 
+      body: planData,
+    );
+
+    if (response.statusCode == 200) {
+      final responseBody = json.decode(response.body);
+    
+      return responseBody['success'];
+    } else {
+      throw Exception('Failed to insert data');
+    }
+  }
+
+  static Future<void> fetchAndStoreEmployeeId(
+      int userId, String accountId) async {
+    try {
+      final response = await http.post(
+        Uri.parse(
+            '${baseurl}/fetch_employees'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: jsonEncode(<String, dynamic>{
+          'account_id': accountId,
+          'user_id': userId,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final responseBody = json.decode(response.body);
+        final employee = responseBody['users'].firstWhere(
+          (user) => user['user_id'] == userId,
+          orElse: () => null,
+        );
+
+        if (employee != null) {
+          final String employeeId = employee['employee_id'].toString();
+          SharedPreferences prefs = await SharedPreferences.getInstance();
+          await prefs.setString('employee_id', employeeId);
+          print('Employee ID stored: $employeeId');
+        } else {
+          print('Employee not found for user ID: $userId');
+        }
+      } else {
+        print('Failed to fetch employees, status code: ${response.statusCode}');
+        throw Exception('Failed to fetch employees');
+      }
+    } catch (e) {
+      print('Error in fetchAndStoreEmployeeId: $e');
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> fetchAttendance(
+      DateTime date) async {
+    final response = await http.post(
+      Uri.parse(
+          '${baseurl}/fetch_all_attendance'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'account_id': '1100'}),
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      final String formattedDate =
+          "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+
+      return data
+          .where((item) => item['created_at'].startsWith(formattedDate))
+          .map((item) {
+        return {
+          'username': item['user_name'],
+          'punchStatus': item['punch_status'],
+          'punchTime': item['time'],
+        };
+      }).toList();
+    } else {
+      throw Exception('Failed to load attendance data');
     }
   }
 
@@ -1271,179 +1461,13 @@ static Future<void> getCollborators(int accid, int projectid) async {
     }
   }
 
-  static const String baseUrl =
-      'https://pw-bms-dev.portalwiz.in/laravelapi/public/api/';
 
-  static Future<List<dynamic>> fetchProjects(int statusGroupId) async {
-    final sharedPref = await SharedPreferences.getInstance();
-    int? userId = sharedPref.getInt('user_id');
-    int? accountId = sharedPref.getInt('account_id');
 
-    if (userId == null || accountId == null) {
-      throw Exception('User ID or Account ID not found in Shared Preferences');
-    }
+  
 
-    Uri uri = Uri.parse('${baseUrl}fetch_projects');
-    var body = jsonEncode({
-      'user_id': userId,
-      'account_id': accountId,
-      'status_group_id': statusGroupId
-    });
 
-    final response = await http.post(uri, body: body, headers: {
-      'Content-Type': 'application/json',
-    });
 
-    if (response.statusCode == 200) {
-      List<dynamic> data = jsonDecode(response.body);
-      return data;
-    } else {
-      throw Exception('Failed to load projects');
-    }
-  }
 
-  static Future<List<Map<String, dynamic>>> fetchEmployees(
-      String accountId) async {
-    final response = await http.post(
-      Uri.parse(
-          'https://pw-bms-dev.portalwiz.in/laravelapi/public/api/fetch_account_employee'),
-      headers: <String, String>{
-        'Content-Type': 'application/json; charset=UTF-8',
-      },
-      body: jsonEncode(<String, String>{
-        'account_id': accountId,
-      }),
-    );
 
-    if (response.statusCode == 200) {
-      List<dynamic> data = jsonDecode(response.body);
-      List<Map<String, dynamic>> employees = [];
-      data.forEach((employee) {
-        employees.add({
-          'first_name': employee['first_name'],
-          'last_name': employee['last_name'],
-          'user_id': employee['user_id'],
-        });
-      });
-      return employees;
-    } else {
-      throw Exception('Failed to fetch employees');
-    }
-  }
-
-  static Future<bool> addDailyPlan(Map<String, dynamic> planData) async {
-      
-    final response = await http.post(
-      Uri.parse(
-          'https://portalwiz.net/laravelapi/public/api/add_daily_plan'),
-      body: planData,
-    ); print(response.body);
-   
-    if (response.statusCode == 200) {
-      final responseBody = json.decode(response.body);
-      print(response.body);
-      return responseBody['success'];
-    } else {
-      throw Exception('Failed to insert data');
-    }
-  }
-  static Future<bool> updateDailyplan(Map<String, dynamic> planData) async {
-    final response = await http.post(
-      Uri.parse(
-          'https://portalwiz.net/laravelapi/public/api/update_daily_plan'),
- 
-      body: planData,
-    );
-
-    if (response.statusCode == 200) {
-      final responseBody = json.decode(response.body);
-    
-      return responseBody['success'];
-    } else {
-      throw Exception('Failed to insert data');
-    }
-  }
-  static Future<bool> addTaskData(Map<String, dynamic> planData) async {
-    final response = await http.post(
-      Uri.parse(
-          'https://portalwiz.net/laravelapi/public/api/update_daily_plan'),
- 
-      body: planData,
-    );
-
-    if (response.statusCode == 200) {
-      final responseBody = json.decode(response.body);
-    
-      return responseBody['success'];
-    } else {
-      throw Exception('Failed to insert data');
-    }
-  }
-
-  static Future<void> fetchAndStoreEmployeeId(
-      int userId, String accountId) async {
-    try {
-      final response = await http.post(
-        Uri.parse(
-            'https://portalwiz.net/laravelapi/public/api/fetch_employees'),
-        headers: <String, String>{
-          'Content-Type': 'application/json; charset=UTF-8',
-        },
-        body: jsonEncode(<String, dynamic>{
-          'account_id': accountId,
-          'user_id': userId,
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        final responseBody = json.decode(response.body);
-        final employee = responseBody['users'].firstWhere(
-          (user) => user['user_id'] == userId,
-          orElse: () => null,
-        );
-
-        if (employee != null) {
-          final String employeeId = employee['employee_id'].toString();
-          SharedPreferences prefs = await SharedPreferences.getInstance();
-          await prefs.setString('employee_id', employeeId);
-          print('Employee ID stored: $employeeId');
-        } else {
-          print('Employee not found for user ID: $userId');
-        }
-      } else {
-        print('Failed to fetch employees, status code: ${response.statusCode}');
-        throw Exception('Failed to fetch employees');
-      }
-    } catch (e) {
-      print('Error in fetchAndStoreEmployeeId: $e');
-    }
-  }
-
-  static Future<List<Map<String, dynamic>>> fetchAttendance(
-      DateTime date) async {
-    final response = await http.post(
-      Uri.parse(
-          'https://portalwiz.net/laravelapi/public/api/fetch_all_attendance'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'account_id': '1100'}),
-    );
-
-    if (response.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(response.body);
-      final String formattedDate =
-          "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
-
-      return data
-          .where((item) => item['created_at'].startsWith(formattedDate))
-          .map((item) {
-        return {
-          'username': item['user_name'],
-          'punchStatus': item['punch_status'],
-          'punchTime': item['time'],
-        };
-      }).toList();
-    } else {
-      throw Exception('Failed to load attendance data');
-    }
-  }
+  
 }

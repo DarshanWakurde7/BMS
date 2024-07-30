@@ -45,6 +45,10 @@ class _MyWidgetState extends State<MyWidget> {
   CommentEnquiredata commentController = Get.put(CommentEnquiredata());
   final ImagePicker _picker = ImagePicker();
 List<Map<String, dynamic>> _attachments = [];
+String lat="";
+String longi="";
+var title=TextEditingController();
+var discription=TextEditingController();
 
 
 @override
@@ -184,7 +188,7 @@ List<Map<String, dynamic>> _attachments = [];
                       );
                       break;
                     case 'comments':
-                      getCurrentLocation();
+                    
                       getCommentsData();
                       showBottomSheet(
                         backgroundColor: Colors.black.withOpacity(0.5),
@@ -385,16 +389,19 @@ List<Map<String, dynamic>> _attachments = [];
                               });
                             }
                           },
-                          child: Container(
-                            width: 80,
-                            height: 80,
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey),
-                              borderRadius: BorderRadius.circular(5),
+                          child: Tooltip(
+                            message: attachment['doc_name'],
+                            child: Container(
+                              width: 80,
+                              height: 80,
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey),
+                                borderRadius: BorderRadius.circular(5),
+                              ),
+                              child: attachment['type'] == 1
+                                  ? Image.network("https://pw-bms-dev.portalwiz.in/laravelapi/storage/app/${attachment['path']}", fit: BoxFit.cover)
+                                  : Icon(Icons.picture_as_pdf, size: 50, color: Colors.red),
                             ),
-                            child: attachment['type'] == 1
-                                ? Image.network("https://pw-bms-dev.portalwiz.in/laravelapi/storage/app/${attachment['path']}", fit: BoxFit.cover)
-                                : Icon(Icons.picture_as_pdf, size: 50, color: Colors.red),
                           ),
                         );
                       }).toList(),
@@ -415,18 +422,27 @@ List<Map<String, dynamic>> _attachments = [];
     var formData = http.MultipartRequest('POST', uri);
     formData.fields.addAll({
       "created_by": sharedPreferences.getInt("user_id").toString(),
+
       "enquiry_id": "${widget.id}",
-      "doc_type":"${docType}"
+      "doc_type":"${docType}",
+      "link": "",
+      "latitude":lat,
+      "longitude":longi,
+      "doc_name":"${title.text}",
+      "description":"${discription.text}",
     });
     formData.files.add(await http.MultipartFile.fromPath(
       'doc_path',
       file.path,
     ));
+    print(formData.fields);
     var response = await formData.send();
+    print(await response.stream.bytesToString());
     if (response.statusCode == 200) {
       print('File uploaded successfully.');
       await fetchImagesforEnquire();
     } else {
+     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text( jsonDecode(await response.stream.bytesToString())["message"],style: TextStyle(color: Colors.black,fontWeight: FontWeight.w500,fontSize: 16),),backgroundColor: Color.fromARGB(0, 160, 160, 160),));
       print('Failed to upload file. Status code: ${response.statusCode}');
     }
   }
@@ -441,10 +457,11 @@ Future<void> fetchImagesforEnquire() async {
 
   if (response.statusCode == 200) {
     List<dynamic> data = jsonDecode(response.body);
+    print(data);
     setState(() {
       _attachments.clear();
       for (var doc in data) {
-        _attachments.add({'path': doc['doc_path'], 'type': doc['doc_type']});
+        _attachments.add({'path': doc['doc_path'], 'type': doc['doc_type'],"doc_name":doc["doc_name"],"description":doc["description"]});
       }
     });
   } else {
@@ -455,23 +472,102 @@ Future<void> fetchImagesforEnquire() async {
   Future<void> _pickImage(ImageSource source) async {
   final pickedFile = await _picker.pickImage(source: source);
   if (pickedFile != null) {
-    setState(() {
+ 
+
+      if(await getCurrentLocation()){
+        showDialogDisCription(File(pickedFile.path),1);
+           setState(() {
       _attachments.add({'path': pickedFile.path, 'type': 1});
     });
-    await uploadFile(File(pickedFile.path), 1);
-    await fetchImagesforEnquire();
+      }
+
+  
   }
 }
+
+
+
+void showDialogDisCription(File pickedFile,int type){
+ 
+    showDialog(context: context, builder: (context) {
+                                          return Dialog(
+                                            child: Container(
+                                              height: MediaQuery.of(context).size.height * 0.4,
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  SizedBox(height: 10,),
+                                                    Padding(
+                                                      padding: const EdgeInsets.only(left: 10.0,top: 5),
+                                                      child: Text("Add Title", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),),
+                                                    ),
+                                                  Padding(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 0),
+                                                    child: TextField(
+                                                      controller: title,
+                                                
+                                                      decoration: InputDecoration(
+                                                 
+                                                        border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(15))),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  Padding(
+                                                     padding: const EdgeInsets.only(left: 10.0,top: 5),
+                                                    child: Text("Add Discription", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),),
+                                                  ),
+                                                  Padding(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 0),
+                                                    child: TextField(
+                                                      controller: discription,
+                                                      maxLines: 5,
+                                                      decoration: InputDecoration(
+                                                    
+                                                        border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(15))),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  SizedBox(height: 5,),
+                                                  Align(
+                                                    alignment: Alignment.bottomCenter,
+                                                    child: ElevatedButton(
+                                                    
+                                                    
+                                                    
+                                                        
+                                                      onPressed: ()async {
+                                                          await uploadFile(File(pickedFile.path), type);
+
+                                                          await fetchImagesforEnquire();
+                                                       title.clear();
+                                                       discription.clear();
+                                                       Navigator.pop(context);
+                                                      },
+                                                      child: Text("Attach", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w500),)
+                                                    ),
+                                                  )
+                                                ],
+                                              ),
+                                            ),
+                                          );
+                                        });
+}
+
+
+
+
 
 Future<void> _pickDocument() async {
   FilePickerResult? result = await FilePicker.platform.pickFiles();
   if (result != null) {
     File file = File(result.files.single.path!);
-    setState(() {
+
+       if(await getCurrentLocation()){
+        showDialogDisCription(file,2);
+            setState(() {
       _attachments.add({'path': file.path, 'type': 2});
     });
-    await uploadFile(file, 2);
-    await fetchImagesforEnquire();
+      }
   }
 }
 
@@ -483,25 +579,31 @@ Future<void> _pickDocument() async {
     );
   }
 
-  Future<void> getCurrentLocation() async {
+  Future<bool> getCurrentLocation() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      return;
+      return false;
     }
 
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission != LocationPermission.whileInUse && permission != LocationPermission.always) {
-        return;
+        return false;
       }
     }
 
     Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
 
+    setState(() {
+      lat="${position.latitude}";
+      longi="${position.longitude}";
+    });
+
     List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
     Placemark placemark = placemarks[0];
+        print('Current Location: ${placemark.street}, ${placemark.locality}, ${placemark.administrativeArea}, ${placemark.country}');
+      return true;
 
-    print('Current Location: ${placemark.street}, ${placemark.locality}, ${placemark.administrativeArea}, ${placemark.country}');
   }
 }

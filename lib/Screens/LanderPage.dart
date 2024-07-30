@@ -236,7 +236,7 @@ class LanderPageState extends State<LanderPage>
 
   void getPunched() async {
     final pref = await SharedPreferences.getInstance();
-
+await ApiCalls.getStatus(pref.getInt('account_id')??0);
     setState(() {
       roleId=pref.getInt("role_id")??0;
       profileUrl = pref.getString('profile_path') ?? "";
@@ -290,6 +290,8 @@ class LanderPageState extends State<LanderPage>
   @override
   void initState() {
     startPolling();
+    fetchAttendanceData();
+    
     getPunched();
     ApiCalls.getDataofCards(1.toString());
 
@@ -387,6 +389,7 @@ class LanderPageState extends State<LanderPage>
   }
 
   Future<Map<String, dynamic>?> fetchAttendanceData() async {
+    
     try {
       final pref = await SharedPreferences.getInstance();
 
@@ -404,15 +407,15 @@ class LanderPageState extends State<LanderPage>
       if (responseAttendance.statusCode == 200) {
         var data = jsonDecode(responseAttendance.body);
 
-        if (pref.getString("chekinTime") != null && data['punch_status'] == 0) {
-          String checkinTimeString = pref.getString("chekinTime")!;
-          DateTime checkinTime = DateTime(
+        if (pref.getString("chekinTime") == null && data['punch_status'] == 0) {
+        
+                 DateTime checkinTime = DateTime(
             DateTime.now().year,
             DateTime.now().month,
             DateTime.now().day,
-            int.parse(checkinTimeString.split(":")[0]),
-            int.parse(checkinTimeString.split(":")[1]),
-            int.parse(checkinTimeString.split(":")[2]),
+            int.parse(data["data"].last["time"][0]),
+            int.parse(data["data"].last["time"][1]),
+            int.parse(data["data"].last["time"][2]),
           );
 
           DateTime currentDate = DateTime.now().subtract(Duration(
@@ -736,20 +739,20 @@ class LanderPageState extends State<LanderPage>
                         builder: (context) => AttendanceReportPage()));
               },
             ),
-            Visibility(
-              visible: (roleId==1),
-              child: ListTile(
-                title: const Text("PM Sheet"),
-                leading: const Icon(Icons.manage_search),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => ProjectManagerSheet(planid: null,)));
-                },
-              ),
-            ),
+            // Visibility(
+            //   visible: (roleId==1),
+            //   child: ListTile(
+            //     title: const Text("PM Sheet"),
+            //     leading: const Icon(Icons.manage_search),
+            //     onTap: () {
+            //       Navigator.pop(context);
+            //       Navigator.push(
+            //           context,
+            //           MaterialPageRoute(
+            //               builder: (context) => ProjectManagerSheet(planid: null,)));
+            //     },
+            //   ),
+            // ),
             ListTile(
               title: const Text("Daily plans"),
               leading: const Icon(Icons.manage_search),
