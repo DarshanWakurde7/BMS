@@ -87,9 +87,9 @@ class _LeaveRequestState extends State<LeaveRequest> {
       print('Retrieved employee ID: $employeeId');
       if (employeeId != null) {
         List<dynamic> leavesData =
-            await ApiCalls.fetchApprovedLeaves('1', employeeId);
+            await ApiCalls.fetchApprovedLeaves('1100', employeeId);
         List<dynamic> wfhData =
-            await ApiCalls.fetchApprovedWfh('1', employeeId);
+            await ApiCalls.fetchApprovedWfh('1100', employeeId);
         setState(() {
           approvedLeaveRequests = leavesData;
           approvedWfhRequests = wfhData;
@@ -247,7 +247,14 @@ class _LeaveRequestState extends State<LeaveRequest> {
   Widget _buildLeaveRequestList(List<dynamic> requests) {
     if (requests.isEmpty) {
       return Center(
-        child: CircularProgressIndicator(),
+        child: Text(
+          'No data found',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey,
+          ),
+        ),
       );
     }
     return ListView.builder(

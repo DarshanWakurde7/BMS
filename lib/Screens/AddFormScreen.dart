@@ -69,25 +69,13 @@ class __AddEnquireFormState extends State<AddEnquireForm>
           );
         });
     final validators = [
-      MyFormValidation.validateNotEmpty(lastname.text, "Last Name"),
-      MyFormValidation.validateNotEmpty(firstname.text, "First name"),
+      MyFormValidation.validateName(lastname.text, "Last Name"),
+      MyFormValidation.validateName(firstname.text, "First Name"),
       MyFormValidation.validateEmail(emailaddress.text),
-      // MyFormValidation.validateNotEmpty(companyname.text),
-      // MyFormValidation.validateNotEmpty(whatsappno.text),
-      MyFormValidation.validateNotEmpty(phoneno.text, "Phone Number"),
-      // MyFormValidation.validateNotEmpty(address.text),
-      // MyFormValidation.validateNotEmpty(state.text),
-      // MyFormValidation.validateNotEmpty(enquireDetails.text),
-      // MyFormValidation.validateDate(enquireDate.text),
-      // MyFormValidation.validateDate(enquireClousreDate.text),
-      // MyFormValidation.validateDate(nextAppointmentDate.text),
-      // MyFormValidation.validateNotEmpty(notes.text),
-      // MyFormValidation.validateNotEmpty(amount.text),
-      // MyFormValidation.validateNotEmpty(dataSource.text),
-      // MyFormValidation.validateNotEmpty(pincode.text),
-      // MyFormValidation.validateNotEmpty(city.text),
+      MyFormValidation.validatePhoneNumber(phoneno.text),
+      MyFormValidation.validateNoSpecialCharacters(state.text, "State"),
+      MyFormValidation.validateNoSpecialCharacters(city.text, "City"),
     ];
-
     for (var validatorMessage in validators) {
       if (validatorMessage != null) {
         MyFormValidation.showSnackBar(context, validatorMessage);
@@ -738,6 +726,33 @@ class MyFormValidation {
   static dynamic validateNotEmpty(String value, String fields) {
     if (value.isEmpty) {
       return '${fields}All Field is required';
+    }
+    return null;
+  }
+
+  static dynamic validateName(String value, String field) {
+    if (value.isEmpty) {
+      return '$field is required';
+    } else if (RegExp(r'[^a-zA-Z\s]').hasMatch(value)) {
+      return '$field should not contain special characters';
+    }
+    return null;
+  }
+
+  static dynamic validatePhoneNumber(String value) {
+    if (value.isEmpty) {
+      return 'Phone Number is required';
+    } else if (!RegExp(r'^\d{10}$').hasMatch(value)) {
+      return 'Phone Number should be exactly 10 digits';
+    }
+    return null;
+  }
+
+  static dynamic validateNoSpecialCharacters(String value, String field) {
+    if (value.isEmpty) {
+      return '$field is required';
+    } else if (RegExp(r'[^a-zA-Z\s]').hasMatch(value)) {
+      return '$field should not contain special characters';
     }
     return null;
   }
