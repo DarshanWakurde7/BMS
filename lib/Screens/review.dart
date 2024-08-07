@@ -38,6 +38,7 @@ class ReviewState extends State<Review> {
             itemCount: dataOfCards.length,
             itemBuilder: ((context, index) {
               return myCards1(
+                projectid: dataOfCards[index].projectTaskId ?? 0,
                 Title: dataOfCards[index].projectName ?? "Project Name Here",
                 taskTypeName: dataOfCards[index].taskTypeName ?? "Normal",
                 description: dataOfCards[index].taskName ?? "Task Name",
@@ -53,6 +54,8 @@ class ReviewState extends State<Review> {
                 refresh: () {
                   getApiCallsActive();
                 },
+                star: dataOfCards[index].lkFeedbackId ?? 3,
+                emoji: dataOfCards[index].smileyId ?? 1,
               );
             })));
   }

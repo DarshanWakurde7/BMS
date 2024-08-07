@@ -279,7 +279,16 @@ class ProjectCard extends StatelessWidget {
                 ),
                 IconButton(
                   icon: Icon(Icons.comment),
-                  onPressed: () {},
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return CommentDialog(
+                          projectId: projectId,
+                        );
+                      },
+                    );
+                  },
                 ),
                 IconButton(
                   icon: Icon(Icons.people),

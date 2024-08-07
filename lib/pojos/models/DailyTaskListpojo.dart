@@ -19,28 +19,31 @@ class todolistpojo {
   String? achievementsUpdatedName;
   String? commentUpdatedName;
   String? userName;
+  List<String>? attachments; // New field for attachments
 
-  todolistpojo(
-      {this.planId,
-      this.userId,
-      this.planName,
-      this.planDate,
-      this.teamId,
-      this.status,
-      this.updatedAt,
-      this.achievements,
-      this.comments,
-      this.createdBy,
-      this.createdAt,
-      this.planUpdatedBy,
-      this.planUpdatedAt,
-      this.achievementsUpdatedBy,
-      this.achievementsUpdatedAt,
-      this.commentUpdatedBy,
-      this.commentUpdatedAt,
-      this.achievementsUpdatedName,
-      this.commentUpdatedName,
-      this.userName});
+  todolistpojo({
+    this.planId,
+    this.userId,
+    this.planName,
+    this.planDate,
+    this.teamId,
+    this.status,
+    this.updatedAt,
+    this.achievements,
+    this.comments,
+    this.createdBy,
+    this.createdAt,
+    this.planUpdatedBy,
+    this.planUpdatedAt,
+    this.achievementsUpdatedBy,
+    this.achievementsUpdatedAt,
+    this.commentUpdatedBy,
+    this.commentUpdatedAt,
+    this.achievementsUpdatedName,
+    this.commentUpdatedName,
+    this.userName,
+    this.attachments, // Initialize attachments in constructor
+  });
 
   todolistpojo.fromJson(Map<String, dynamic> json) {
     planId = json['plan_id'];
@@ -63,6 +66,9 @@ class todolistpojo {
     achievementsUpdatedName = json['achievements_updated_name'];
     commentUpdatedName = json['comment_updated_name'];
     userName = json['user_name'];
+    attachments = json['attachments'] != null
+        ? List<String>.from(json['attachments'])
+        : null; // Parse attachments
   }
 
   Map<String, dynamic> toJson() {
@@ -87,6 +93,7 @@ class todolistpojo {
     data['achievements_updated_name'] = this.achievementsUpdatedName;
     data['comment_updated_name'] = this.commentUpdatedName;
     data['user_name'] = this.userName;
+    data['attachments'] = this.attachments; // Add attachments to JSON
     return data;
   }
 }

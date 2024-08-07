@@ -6,6 +6,8 @@ import 'dart:convert';
 import 'package:bms/Screens/LeaveForm.dart';
 import 'package:bms/Screens/WfhForm.dart';
 import 'package:bms/Screens/AttendenceDetails.dart';
+import 'package:lottie/lottie.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LeaveTracker extends StatelessWidget {
   @override
@@ -78,10 +80,28 @@ class _LeaveSectionState extends State<LeaveSection> {
 
   @override
   void initState() {
+    _fetchAndStoreEmployeeId();
     super.initState();
     futureCasualLeaves = ApiCalls.fetchCasualLeaves();
     futureSickLeaves = ApiCalls.fetchSickLeaves();
     futureElectiveLeaves = ApiCalls.fetchElectiveLeaves();
+  }
+
+  Future<void> _fetchAndStoreEmployeeId() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? employeeId = prefs.getString('employee_id');
+
+    // Print for debugging
+    print("Stored employee ID: $employeeId");
+
+    if (employeeId == null) {
+      await ApiCalls.fetchAndStoreEmployeeId('1100');
+      employeeId = prefs
+          .getString('employee_id'); // Fetch it again after attempting to store
+      print("Employee ID after fetching and storing: $employeeId");
+    } else {
+      print('Employee ID already found in SharedPreferences: $employeeId');
+    }
   }
 
   @override
@@ -407,17 +427,36 @@ class _LeaveHistorySectionState extends State<LeaveHistorySection> {
     return FutureBuilder<List<LeaveHistory>>(
       future: futureLeaveHistory,
       builder: (context, snapshot) {
-        if (snapshot.hasData) {
-          List<LeaveHistory>? leaveHistory = snapshot.data;
-          return Column(
-            children: leaveHistory!
-                .map((leave) => LeaveHistoryCard(leave: leave))
-                .toList(),
-          );
-        } else if (snapshot.hasError) {
-          return Text("${snapshot.error}");
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: Container());
         }
-        return Container();
+        if (snapshot.hasError) {
+          return Center(child: Text("${snapshot.error}"));
+        }
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Lottie.asset('asset/animation/notfound.json'),
+                SizedBox(height: 20),
+                Text(
+                  'No Leave History',
+                  style: GoogleFonts.lato(
+                    fontSize: 18.0,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+        List<LeaveHistory>? leaveHistory = snapshot.data;
+        return Column(
+          children: leaveHistory!
+              .map((leave) => LeaveHistoryCard(leave: leave))
+              .toList(),
+        );
       },
     );
   }

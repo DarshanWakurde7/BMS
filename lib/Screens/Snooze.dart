@@ -54,6 +54,7 @@ class SnoozedState extends State<Snoozed> {
                   }
 
                   return myCards1(
+                    projectid: dataOfCards[index].projectTaskId ?? 0,
                     Title: openseaController
                             .dataofCardsSnoozed[index].projectName ??
                         "Project Name Here",
@@ -83,6 +84,8 @@ class SnoozedState extends State<Snoozed> {
                     refresh: () {
                       apiCallActivate();
                     },
+                    star: dataOfCards[index].lkFeedbackId ?? 3,
+                    emoji: dataOfCards[index].smileyId ?? 1,
                   );
                 }));
           }

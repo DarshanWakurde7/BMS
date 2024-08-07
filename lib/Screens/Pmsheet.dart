@@ -4,21 +4,23 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
-
 class ProjectManagerSheet extends StatefulWidget {
-   ProjectManagerSheet({required this.planid,required this.updateList});
+  ProjectManagerSheet(
+      {required this.planid,
+      required this.updateList,
+      required this.seletDate});
   final int? planid;
   Function updateList;
+  DateTime seletDate;
   @override
   _ProjectManagerSheetState createState() => _ProjectManagerSheetState();
 }
 
 class _ProjectManagerSheetState extends State<ProjectManagerSheet> {
-  DateTime _selectedDate = DateTime.now();
   String? _selectedEmployee;
   TextEditingController _entryController = TextEditingController();
   bool _isPlanCompleted = false;
-List<dynamic> _employeeList = [];
+  List<dynamic> _employeeList = [];
   List<dynamic> _teamsList = [];
   int? _selectedTeam;
   // static String baseurl="https://pw-bms-dev.portalwiz.in/laravelapi/public/api";
@@ -37,65 +39,69 @@ List<dynamic> _employeeList = [];
   //     setState(() {
   //       _employeeList = employees;
   //       // Fetch the plan after fetching employees
-  //       fetchPlan(); 
+  //       fetchPlan();
   //     });
   //   } catch (e) {
   //     print('Error fetching employees: $e');
   //   }
   // }
-Future<void> fetchPlan() async {
-  if (widget.planid != null) {
-    try {
-      final response = await http.post(
-        Uri.parse('https://portalwiz.net/laravelapi/public/api/fetch_single_daily_plan'),
-        body: {"plan_id": "${widget.planid}"},
-      );
+  Future<void> fetchPlan() async {
+    if (widget.planid != null) {
+      try {
+        final response = await http.post(
+          Uri.parse(
+              'https://portalwiz.net/laravelapi/public/api/fetch_single_daily_plan'),
+          body: {"plan_id": "${widget.planid}"},
+        );
 
-      print(response.body + " new Responseee....");
+        print(response.body + " new Responseee....");
 
-      if (response.statusCode == 200) {
-        final List<dynamic> responseData = jsonDecode(response.body);
-        if (responseData.isNotEmpty) {
-          final data = responseData[0];
-          bool functionData = await fetchTeamEmployees(data['team_id']);
+        if (response.statusCode == 200) {
+          final List<dynamic> responseData = jsonDecode(response.body);
+          if (responseData.isNotEmpty) {
+            final data = responseData[0];
+            bool functionData = await fetchTeamEmployees(data['team_id']);
 
-          setState(() {
-            _selectedDate = data['plan_date'] != null ? DateTime.parse(data['plan_date']) : DateTime.now();
-            _entryController.text = data['plan_name'] ?? "";
-            _isPlanCompleted = data['status'] == 1;
-            _selectedTeam = data['team_id'];
+            setState(() {
+              widget.seletDate = data['plan_date'] != null
+                  ? DateTime.parse(data['plan_date'])
+                  : DateTime.now();
+              _entryController.text = data['plan_name'] ?? "";
+              _isPlanCompleted = data['status'] == 1;
+              _selectedTeam = data['team_id'];
 
-            if (data['user_id'] != null && functionData) {
-              try {
-                final selectedEmployee = _employeeList.firstWhere(
-                  (employee) => employee['user_id'].toString() == data['user_id'].toString(),
-                  orElse: () => null,
-                );
-                _selectedEmployee = selectedEmployee != null
-                    ? '${selectedEmployee['first_name']} ${selectedEmployee['last_name']}'
-                    : null;
-              } catch (e) {
-                print('Employee not found: $e');
-                _selectedEmployee = null;
+              if (data['user_id'] != null && functionData) {
+                try {
+                  final selectedEmployee = _employeeList.firstWhere(
+                    (employee) =>
+                        employee['user_id'].toString() ==
+                        data['user_id'].toString(),
+                    orElse: () => null,
+                  );
+                  _selectedEmployee = selectedEmployee != null
+                      ? '${selectedEmployee['first_name']} ${selectedEmployee['last_name']}'
+                      : null;
+                } catch (e) {
+                  print('Employee not found: $e');
+                  _selectedEmployee = null;
+                }
               }
-            }
-          });
+            });
+          } else {
+            print('No data found.');
+          }
         } else {
-          print('No data found.');
+          print('Failed to fetch plan. Status code: ${response.statusCode}');
         }
-      } else {
-        print('Failed to fetch plan. Status code: ${response.statusCode}');
+      } catch (e) {
+        print('Error fetching plan: $e');
       }
-    } catch (e) {
-      print('Error fetching plan: $e');
+    } else {
+      print('Plan ID is null');
     }
-  } else {
-    print('Plan ID is null');
   }
-}
 
-
- Future<bool> fetchTeamEmployees(int teamId) async {
+  Future<bool> fetchTeamEmployees(int teamId) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     try {
       var url = Uri.parse('${baseurl}/fetch_team_employee');
@@ -109,23 +115,20 @@ Future<void> fetchPlan() async {
         body: jsonEncode({
           "team_id": [teamId],
           "account_id": "${prefs.getInt("account_id")}",
-          "user_id":["${prefs.getInt("user_id")}"]
+          "user_id": ["${prefs.getInt("user_id")}"]
         }),
       );
-    
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        List<Map<String, dynamic>> employees = List<Map<String, dynamic>>.from(data);
-        
-        if (mounted) {
-          setState(() {addOrUpdateDailyPlan();
-            _employeeList = jsonDecode(response.body);
-       
-          });
+        List<Map<String, dynamic>> employees =
+            List<Map<String, dynamic>>.from(data);
 
-         
-      
+        if (mounted) {
+          setState(() {
+            addOrUpdateDailyPlan();
+            _employeeList = jsonDecode(response.body);
+          });
         }
         return true;
       } else {
@@ -137,11 +140,6 @@ Future<void> fetchPlan() async {
       return false;
     }
   }
-
-
-
-
-  
 
   Future<void> fetchTeams() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -176,9 +174,11 @@ Future<void> fetchPlan() async {
       return;
     }
 
-    final selectedEmployee = _employeeList.firstWhere((employee) =>
-        employee['first_name'] + ' ' + employee['last_name'] == _selectedEmployee,
-      );
+    final selectedEmployee = _employeeList.firstWhere(
+      (employee) =>
+          employee['first_name'] + ' ' + employee['last_name'] ==
+          _selectedEmployee,
+    );
 
     if (selectedEmployee == null) {
       print('Selected employee not found');
@@ -189,7 +189,7 @@ Future<void> fetchPlan() async {
       "user_id": selectedEmployee['user_id'].toString(),
       "plan_id": "${widget.planid}",
       "plan_name": _entryController.text,
-      "plan_date": _selectedDate.toIso8601String().split('T')[0],
+      "plan_date": widget.seletDate.toIso8601String().split('T')[0],
       "updated_by": selectedEmployee['user_id'].toString(),
       "status": _isPlanCompleted ? "1" : "0",
       "team_id": "$_selectedTeam",
@@ -287,17 +287,18 @@ Future<void> fetchPlan() async {
                           onPressed: () async {
                             DateTime? pickedDate = await showDatePicker(
                               context: context,
-                              initialDate: _selectedDate,
+                              initialDate: widget.seletDate,
                               firstDate: DateTime(2000),
                               lastDate: DateTime(2101),
                             );
-                            if (pickedDate != null && pickedDate != _selectedDate)
+                            if (pickedDate != null &&
+                                pickedDate != widget.seletDate)
                               setState(() {
-                                _selectedDate = pickedDate;
+                                widget.seletDate = pickedDate;
                               });
                           },
                           child: Text(
-                            "${_selectedDate.toLocal()}".split(' ')[0],
+                            "${widget.seletDate.toLocal()}".split(' ')[0],
                             style: TextStyle(
                               color: Colors.blue,
                               fontWeight: FontWeight.bold,
@@ -324,7 +325,8 @@ Future<void> fetchPlan() async {
                       decoration: InputDecoration(
                         labelText: 'Select Team',
                         labelStyle: TextStyle(fontSize: 14),
-                        contentPadding: EdgeInsets.symmetric(vertical: 0.0, horizontal: 8.0),
+                        contentPadding: EdgeInsets.symmetric(
+                            vertical: 0.0, horizontal: 8.0),
                         isDense: true,
                       ),
                       value: _selectedTeam,
@@ -332,7 +334,8 @@ Future<void> fetchPlan() async {
                         setState(() {
                           _selectedTeam = newValue;
                           if (_selectedTeam != null) {
-                            fetchTeamEmployees(_selectedTeam!); // Fetch employees when team changes
+                            fetchTeamEmployees(
+                                _selectedTeam!); // Fetch employees when team changes
                           }
                         });
                       },
@@ -352,7 +355,8 @@ Future<void> fetchPlan() async {
                       decoration: InputDecoration(
                         labelText: 'Select Employee',
                         labelStyle: TextStyle(fontSize: 14),
-                        contentPadding: EdgeInsets.symmetric(vertical: 0.0, horizontal: 8.0),
+                        contentPadding: EdgeInsets.symmetric(
+                            vertical: 0.0, horizontal: 8.0),
                         isDense: true,
                       ),
                       value: _selectedEmployee,
@@ -361,8 +365,10 @@ Future<void> fetchPlan() async {
                           _selectedEmployee = newValue;
                         });
                       },
-                      items: _employeeList.map<DropdownMenuItem<String>>((employee) {
-                        final fullName = '${employee['first_name']} ${employee['last_name']}';
+                      items: _employeeList
+                          .map<DropdownMenuItem<String>>((employee) {
+                        final fullName =
+                            '${employee['first_name']} ${employee['last_name']}';
                         return DropdownMenuItem<String>(
                           value: fullName,
                           child: Text(

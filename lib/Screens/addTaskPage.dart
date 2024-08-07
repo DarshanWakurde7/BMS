@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:bms/ApiCalls/apiCalls.dart';
+import 'package:bms/widgets/searchable_dropdown.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
@@ -9,6 +10,7 @@ import 'package:get/get.dart';
 import 'package:multi_dropdown/multiselect_dropdown.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:dropdown_search/dropdown_search.dart';
 
 class AddTask extends StatefulWidget {
   AddTask(
@@ -26,7 +28,7 @@ class AddTask extends StatefulWidget {
 }
 
 class AddTaskState extends State<AddTask> {
-    bool _isLoading = false;
+  bool _isLoading = false;
   DateTime esStart = DateTime.now();
   DateTime esEnd = DateTime.now();
   DateTime planStart = DateTime.now();
@@ -42,21 +44,23 @@ class AddTaskState extends State<AddTask> {
   bool getbill = false;
   bool invoiced = false;
   bool focus = false;
-   List<ValueItem<int>> assignedtp = [];
+  List<ValueItem<int>> assignedtp = [];
   String Status = "Status";
   String priority = "Priority";
   String category = "Category";
   String task = "task";
-  String assigne = "Assigne";
+  String assigne = "Assignee";
   String collaborator = "collaborator";
   FocusNode esTimeFocusNode = FocusNode();
-  int assingnid=0;
-  int categoryid=0;
-  int priorityid=0;
-  int statusid=0;
-  int taskTypeid=0;
-
-
+  int assingnid = 0;
+  int categoryid = 0;
+  int priorityid = 0;
+  int statusid = 0;
+  int taskTypeid = 0;
+  List<Map<String, dynamic>> projectList = [];
+  String? selectedProject;
+  bool showDropdown = false;
+  List<Map<String, dynamic>> filteredItems = [];
   FocusNode _unUsedFocusNode = FocusNode();
 
   @override
@@ -67,21 +71,59 @@ class AddTaskState extends State<AddTask> {
     checkEdit = false;
     getbill = false;
     super.initState();
+    fetchProjectList();
   }
 
   void getApis() async {
     await ApiCalls.gettaskByUser(widget.accid);
-    await ApiCalls.getCollborators(widget.accid,widget.projecid);
+    await ApiCalls.getCollborators(widget.accid, widget.projecid);
 // await ApiCalls.getUsersByTask(widget.accid,proid);
     await ApiCalls.gettaskCategory(widget.accid);
     await ApiCalls.getStatus(widget.accid);
   }
 
+  String getHtmlFromQuillController(QuillController controller) {
+    final delta = controller.document.toDelta();
+    return deltaToHtml(delta);
+  }
 
-    String getHtmlFromQuillController(QuillController controller) {
-  final delta = controller.document.toDelta();
-  return deltaToHtml(delta);
-}
+  Future<void> fetchProjectList() async {
+    final response = await http.post(
+      Uri.parse(
+          'https://pw-bms-dev.portalwiz.in/laravelapi/public/api/fetch_project_list'),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: jsonEncode({"account_id": "1100"}),
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      setState(() {
+        projectList = data.map((project) {
+          return {
+            'project_name': project['project_name'],
+            'project_id': project['project_id'],
+          };
+        }).toList();
+        // Initialize filteredItems with the full list
+        filteredItems = List.from(projectList);
+      });
+    } else {
+      throw Exception('Failed to load project list');
+    }
+  }
+
+  void handleTextChange(String value) {
+    setState(() {
+      showDropdown = value.isNotEmpty && checkEdit;
+      filteredItems = projectList
+          .where((project) => project['project_name']
+              .toLowerCase()
+              .contains(value.toLowerCase()))
+          .toList();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -91,611 +133,731 @@ class AddTaskState extends State<AddTask> {
             "Add Task",
             style: TextStyle(color: Colors.black, fontWeight: FontWeight.w300),
           ),
+          backgroundColor: Colors.white,
+          elevation: 1,
         ),
-        body: SingleChildScrollView(
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.manual,
-          scrollDirection: Axis.vertical,
-          child: Column(mainAxisAlignment: MainAxisAlignment.start, children: [
-            // SizedBox(height: MediaQuery.of(context).size.height*0.04,),
-            Container(
-              margin: EdgeInsets.fromLTRB(10, 0, 10, 0),
-              child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+        body: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                        child: TextField(
-                      controller: textTtile,
-                      decoration: InputDecoration(
-                        hintText: widget.title,
+                    Stack(
+                      children: [
+                        TextField(
+                          controller: textTtile,
+                          decoration: InputDecoration(
+                            labelText: "Task Title",
+                            hintText: widget.title,
+                            hintStyle: TextStyle(fontSize: 18),
+                            border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(
+                                vertical: 10.0, horizontal: 12.0),
+                          ),
+                          enabled: checkEdit,
+                          style: TextStyle(fontSize: 18),
+                          onChanged: handleTextChange,
+                        ),
+                        Positioned(
+                          right: 0,
+                          child: IconButton(
+                            icon: Icon(
+                                checkEdit ? Icons.check_circle : Icons.edit),
+                            onPressed: () {
+                              setState(() {
+                                checkEdit = !checkEdit;
+                                showDropdown = false;
+                                if (!checkEdit) {
+                                  textTtile.text = widget.title;
+                                }
+                              });
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (showDropdown && checkEdit)
+                      Container(
+                        height: 300,
+                        child: CustomSearchDropdown(
+                          items: filteredItems,
+                          selectedItem: selectedProject,
+                          onChanged: (value) {
+                            setState(() {
+                              selectedProject = value;
+                              textTtile.text = value!;
+                              showDropdown = false;
+                              checkEdit = false;
+                            });
+                          },
+                        ),
                       ),
-                      onTapOutside: (PointerDownEvent event) {
-                        FocusScope.of(context).requestFocus(_unUsedFocusNode);
-                      },
-                      enabled: checkEdit,
-                      style: TextStyle(fontSize: 20),
-                    )),
-                    InkWell(
-                        onTap: () {
-                          setState(() {
-                            checkEdit = !checkEdit;
-                          });
-                        },
-                        child: const Icon(Icons.edit)),
-                  ]),
-            ),
+                    SizedBox(height: 16),
+                    Stack(
+                      children: [
+                        TextField(
+                          controller: taskArea,
+                          decoration: InputDecoration(
+                            labelText: "Enter Task Description",
+                            border: OutlineInputBorder(),
+                            hintText: "Enter Task Description",
+                          ),
+                          maxLines: 3,
+                          readOnly: false,
+                        ),
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          child: IconButton(
+                            icon: Icon(Icons.edit),
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) {
+                                  return Dialog(
+                                    child: Container(
+                                      padding: EdgeInsets.all(16.0),
+                                      child: QuillToolbar.simple(
+                                        configurations:
+                                            QuillSimpleToolbarConfigurations(
+                                          controller: editingtext,
+                                          showFontFamily: false,
+                                          showUndo: false,
+                                          showRedo: false,
+                                          showSearchButton: false,
+                                          showHeaderStyle: false,
+                                          showBackgroundColorButton: false,
+                                          showColorButton: false,
+                                          showSubscript: false,
+                                          showSuperscript: false,
+                                          sharedConfigurations:
+                                              const QuillSharedConfigurations(
+                                            locale: Locale('de'),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 16),
 
-            Container(
-              decoration: BoxDecoration(),
-              margin: const EdgeInsets.fromLTRB(10, 5, 10, 5),
-              child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    Expanded(
-                        child: TextField(
-                      style: TextStyle(fontSize: 15),
-                      controller: taskArea,
-                      decoration: InputDecoration(
-                        labelText: "Enter Task",
-                        labelStyle: TextStyle(fontSize: 15),
-                        hintText: "Enter  Task",
-                        hintStyle: TextStyle(fontSize: 15),
-                        border: OutlineInputBorder(
-                            borderSide: const BorderSide(color: Colors.black),
-                            borderRadius: BorderRadius.circular(7)),
-                        focusedBorder: OutlineInputBorder(
-                            borderSide:
-                                const BorderSide(color: Colors.blueAccent),
-                            borderRadius: BorderRadius.circular(7)),
+                    Container(
+                      padding: const EdgeInsets.all(16.0),
+                      decoration: BoxDecoration(
+                        color: Color.fromARGB(255, 206, 236, 255),
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black26, blurRadius: 4)
+                        ],
                       ),
-                      onTapOutside: (PointerDownEvent event) {
-                        FocusScope.of(context).requestFocus(_unUsedFocusNode);
-                      },
-                    )),
-                  ]),
-            ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    "Est. Effort: ",
+                                    style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                  SizedBox(width: 8),
+                                  SizedBox(
+                                    width: 80,
+                                    child: TextField(
+                                      focusNode: esTimeFocusNode,
+                                      keyboardType: TextInputType.number,
+                                      controller: esTime,
+                                      decoration: InputDecoration(
+                                        hintText: "0",
+                                        border: OutlineInputBorder(),
+                                        contentPadding: EdgeInsets.symmetric(
+                                            vertical: 8.0, horizontal: 8.0),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Text(
+                                "Actual Effort: 00",
+                                style: TextStyle(
+                                    fontSize: 16, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 16),
+                          Row(
+                            children: [
+                              _buildCheckbox("Billable", getbill, (val) {
+                                setState(() {
+                                  getbill = val ?? false;
+                                });
+                              }),
+                              _buildCheckbox("Invoiced", invoiced, (val) {
+                                setState(() {
+                                  invoiced = val ?? false;
+                                });
+                              }),
+                              _buildCheckbox("Focus", focus, (val) {
+                                setState(() {
+                                  focus = val ?? false;
+                                });
+                              }),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
 
-            Card(
-              margin: const EdgeInsets.fromLTRB(10, 3, 10, 3),
-              child: Container(
-                margin: const EdgeInsets.fromLTRB(10, 2, 10, 2),
-                child: Column(
-                  children: [
+                    // SizedBox(height: 16),
+
+                    // // Quill Editor
+                    // Container(
+                    //   padding: const EdgeInsets.all(16.0),
+                    //   decoration: BoxDecoration(
+                    //     border: Border.all(color: Colors.grey[300]!),
+                    //     borderRadius: BorderRadius.circular(8),
+                    //   ),
+                    //   child: QuillEditor.basic(
+                    //     configurations: QuillEditorConfigurations(
+                    //       placeholder: "Enter Task Here...",
+                    //       showCursor: true,
+                    //       controller: editingtext,
+                    //       sharedConfigurations: const QuillSharedConfigurations(
+                    //         locale: Locale('de'),
+                    //       ),
+                    //     ),
+                    //   ),
+                    // ),
+
+                    // SizedBox(height: 10),
+
+                    // Center(
+                    //   child: TextButton(
+                    //     style: TextButton.styleFrom(
+                    //       foregroundColor: Colors.black,
+                    //       padding: EdgeInsets.symmetric(
+                    //           vertical: 5.0, horizontal: 40.0),
+                    //       backgroundColor: Color.fromARGB(255, 69, 73, 76),
+                    //       minimumSize: Size(100, 40),
+                    //     ),
+                    //     onPressed: () {
+                    //       showDialog(
+                    //         context: context,
+                    //         builder: (context) {
+                    //           return Dialog(
+                    //             child: Container(
+                    //               padding: EdgeInsets.all(16.0),
+                    //               child: QuillToolbar.simple(
+                    //                 configurations:
+                    //                     QuillSimpleToolbarConfigurations(
+                    //                   controller: editingtext,
+                    //                   showFontFamily: false,
+                    //                   showUndo: false,
+                    //                   showRedo: false,
+                    //                   showSearchButton: false,
+                    //                   showHeaderStyle: false,
+                    //                   showBackgroundColorButton: false,
+                    //                   showColorButton: false,
+                    //                   showSubscript: false,
+                    //                   showSuperscript: false,
+                    //                   sharedConfigurations:
+                    //                       const QuillSharedConfigurations(
+                    //                     locale: Locale('de'),
+                    //                   ),
+                    //                 ),
+                    //               ),
+                    //             ),
+                    //           );
+                    //         },
+                    //       );
+                    //     },
+                    //     child: Text(
+                    //       "Edit Text",
+                    //       style: TextStyle(
+                    //           fontWeight: FontWeight.w400,
+                    //           fontSize: 16,
+                    //           color: Colors.white), // Increased font size
+                    //     ),
+                    //   ),
+                    // ),
+                    SizedBox(height: 10),
                     Row(
                       children: [
-                        Text(
-                          "Est. Effort-",
-                          style: TextStyle(
-                              fontSize: 13, fontWeight: FontWeight.w500),
-                        ),
-                        SizedBox(
-                          width: MediaQuery.of(context).size.width * 0.03,
-                        ),
                         Expanded(
-                          child: TextField(
-  focusNode: esTimeFocusNode,
-  style: TextStyle(fontSize: 13),
-  keyboardType: TextInputType.number,
-  controller: esTime,
-  decoration: InputDecoration(
-    isDense: true,
-    hintText: "0",
-    hintStyle: TextStyle(fontSize: 13),
-    border: OutlineInputBorder(
-      borderSide: BorderSide(color: Colors.black),
-      borderRadius: BorderRadius.circular(7)
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderSide: BorderSide(color: Colors.blueAccent),
-      borderRadius: BorderRadius.circular(7)
-    ),
-  ),
-),
-                        ),
-                        SizedBox(
-                          width: MediaQuery.of(context).size.width * 0.15,
-                        ),
-                        Text(
-                          "Actual Effort-" + "00",
-                          style: TextStyle(
-                              fontSize: 13, fontWeight: FontWeight.w500),
-                        ),
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        Checkbox(
-                            value: getbill,
-                            onChanged: (val) {
-                              setState(() {
-                                getbill = val ?? false;
-                              });
-                            }),
-                        Text(
-                          "Billable",
-                          style: TextStyle(
-                              fontSize: 13, fontWeight: FontWeight.w300),
-                        ),
-                        SizedBox(
-                          width: MediaQuery.of(context).size.width * 0.03,
-                        ),
-                        Checkbox(
-                            value: invoiced,
-                            onChanged: (val) {
-                              setState(() {
-                                invoiced = val ?? false;
-                              });
-                            }),
-                        Text(
-                          "Invoiced",
-                          style: TextStyle(
-                              fontSize: 13, fontWeight: FontWeight.w300),
-                        ),
-                        SizedBox(
-                          width: MediaQuery.of(context).size.width * 0.03,
-                        ),
-                        Checkbox(
-                            value: focus,
-                            onChanged: (val) {
-                              setState(() {
-                                focus = val ?? false;
-                              });
-                            }),
-                        Text(
-                          "Focus",
-                          style: TextStyle(
-                              fontSize: 13, fontWeight: FontWeight.w300),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            //---------------------------------
-
-            TextButton(
-                style: ButtonStyle(
-                    fixedSize: MaterialStatePropertyAll(Size(
-                        MediaQuery.of(context).size.width,
-                        MediaQuery.of(context).size.height * 0.025)),
-                    backgroundColor: MaterialStatePropertyAll(
-                        Color.fromARGB(255, 240, 240, 240))),
-                onPressed: () {
-                  showDialog(
-                      context: context,
-                      builder: (context) {
-                        return Dialog(
                           child: Container(
-                            width: MediaQuery.of(context).size.width * 0.5,
-                            height: MediaQuery.of(context).size.height * 0.25,
-                            child: QuillToolbar.simple(
-                              configurations: QuillSimpleToolbarConfigurations(
-                                controller: editingtext,
-                                showFontFamily: false,
-                                showUndo: false,
-                                showRedo: false,
-                                showSearchButton: false,
-                                showHeaderStyle: false,
-                                showBackgroundColorButton: false,
-                                showColorButton: false,
-                                showSubscript: false,
-                                showSuperscript: false,
-                                sharedConfigurations:
-                                    const QuillSharedConfigurations(
-                                  locale: Locale('de'),
+                            margin: EdgeInsets.all(5), // Reduced margin
+                            //  padding: EdgeInsets.symmetric(horizontal: 10),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: InputDecorator(
+                              decoration: const InputDecoration(
+                                contentPadding: EdgeInsets.symmetric(
+                                    vertical: 2, horizontal: 7),
+                                labelText: "Category",
+                                border: OutlineInputBorder(
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(8)),
                                 ),
+                              ),
+                              child: DropdownButton<String>(
+                                underline: SizedBox.shrink(),
+                                menuMaxHeight: 150,
+                                isExpanded: true,
+                                hint: Padding(
+                                  padding: EdgeInsets.fromLTRB(15, 0, 0, 0),
+                                  child: Text(
+                                    category,
+                                    style: TextStyle(
+                                        fontSize: 12, color: Colors.black),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                                items: myCategories
+                                    .map((item) => DropdownMenuItem<String>(
+                                          value: item.taskCategory ?? "",
+                                          child: Text(
+                                            item.taskCategory ?? "",
+                                            style: TextStyle(fontSize: 12),
+                                          ),
+                                        ))
+                                    .toList(),
+                                onChanged: (item) {
+                                  setState(() {
+                                    category = item ?? '';
+                                    categoryid = myCategories
+                                            .firstWhere(
+                                              (category) =>
+                                                  item ==
+                                                  (category.taskCategory ?? ""),
+                                            )
+                                            .taskCategoryId ??
+                                        0;
+                                  });
+                                  print(item);
+                                },
                               ),
                             ),
                           ),
-                        );
-                      });
-                },
-                child: Text(
-                  "Edit Text ",
-                  style: TextStyle(
-                      color: Colors.black, fontWeight: FontWeight.w400),
-                )),
-
-            Container(
-              decoration: BoxDecoration(
-                  border: Border.all(
-                      color: const Color.fromARGB(255, 131, 130, 130))),
-              margin: const EdgeInsets.fromLTRB(10, 5, 10, 5),
-              child: Row(children: [
-                Expanded(
-                  child: QuillEditor.basic(
-                    configurations: QuillEditorConfigurations(
-                      placeholder: "Enter Task Here...",
-                      showCursor: true,
-                      controller: editingtext,
-                      // readOnly: false,
-                      sharedConfigurations: const QuillSharedConfigurations(
-                        locale: Locale('de'),
-                      ),
+                        ),
+                        Expanded(
+                          child: Container(
+                            // padding: EdgeInsets.symmetric(horizontal: 10),
+                            margin: EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: InputDecorator(
+                              decoration: const InputDecoration(
+                                contentPadding: EdgeInsets.symmetric(
+                                    vertical: 2, horizontal: 7),
+                                labelText: "Priority",
+                                border: OutlineInputBorder(
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(8)),
+                                ),
+                              ),
+                              child: DropdownButton<String>(
+                                underline: SizedBox.shrink(),
+                                menuMaxHeight: 150,
+                                isExpanded: true,
+                                hint: Padding(
+                                  padding: EdgeInsets.fromLTRB(15, 0, 0, 0),
+                                  child: Text(
+                                    priority,
+                                    style: TextStyle(
+                                        fontSize: 12, color: Colors.black),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                                items: myprority
+                                    .map((item) => DropdownMenuItem<String>(
+                                          value: item.priority,
+                                          child: Text(
+                                            item.priority ?? "",
+                                            style: TextStyle(fontSize: 12),
+                                          ),
+                                        ))
+                                    .toList(),
+                                onChanged: (item) {
+                                  setState(() {
+                                    priority = item ?? '';
+                                    priorityid = myprority
+                                            .firstWhere(
+                                              (priority) =>
+                                                  item ==
+                                                  (priority.priority ?? ""),
+                                            )
+                                            .priorityId ??
+                                        0;
+                                  });
+                                  print(item);
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ),
-              ]),
-            ),
-
-            Container(
-                margin: EdgeInsets.all(10),
-                width: MediaQuery.of(context).size.width * 0.9,
-                height: MediaQuery.of(context).size.height * 0.07,
-                decoration: BoxDecoration(
-
-                    // borderRadius: BorderRadius.circular(),
-                    color: Colors.white),
-                child: InputDecorator(
-                  decoration: const InputDecoration(
-                      labelText: "Category",
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(8)),
-                      )),
-                  child: DropdownButton<String>(
-                      underline: Text(""),
-                      menuMaxHeight: 150,
-                      isExpanded: true,
-                      borderRadius: BorderRadius.circular(25),
-                      hint: Padding(
-                          padding: EdgeInsets.fromLTRB(15, 0, 0, 0),
-                          child: Text(
-                            category,
-                            style: TextStyle(fontSize: 10, color: Colors.black),
-                            textAlign: TextAlign.center,
-                          )),
-                      items: myCategories
-                          .map((item) => DropdownMenuItem<String>(
-                                value: item.taskCategory??"",
-                                child: Text(
-                                  item.taskCategory??"",
-                                  style: TextStyle(fontSize: 9),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            margin: EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: InputDecorator(
+                              decoration: const InputDecoration(
+                                contentPadding: EdgeInsets.symmetric(
+                                    vertical: 2, horizontal: 7),
+                                labelText: "Assign To",
+                                border: OutlineInputBorder(
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(8)),
                                 ),
-                              ))
-                          .toList(),
-                      onChanged: (item) {
-                        setState(() {
-                          category = item.toString();
-                           categoryid = myCategories.firstWhere(
-                (employee) => item == (employee.taskCategory??""),
-                
-              ).taskCategoryId??0;
-                        });
-                        print(item);
-                      }),
-                )),
-
-            Container(
-                width: MediaQuery.of(context).size.width * 0.9,
-                margin: const EdgeInsets.fromLTRB(20, 5, 20, 5),
-                height: MediaQuery.of(context).size.height * 0.07,
-                decoration: BoxDecoration(
-
-                    // borderRadius: BorderRadius.circular(),
-                    color: Colors.white),
-                child: InputDecorator(
-                  decoration: const InputDecoration(
-                      labelText: "Priority",
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(8)),
-                      )),
-                  child: DropdownButton<String>(
-                      underline: Text(""),
-                      menuMaxHeight: 150,
-                      isExpanded: true,
-                      borderRadius: BorderRadius.circular(25),
-                      hint: Padding(
-                          padding: EdgeInsets.fromLTRB(15, 0, 0, 0),
-                          child: Text(
-                            priority,
-                            style: TextStyle(fontSize: 10, color: Colors.black),
-                            textAlign: TextAlign.center,
-                          )),
-                      items: myprority
-                          .map((item) => DropdownMenuItem<String>(
-                                value: item.priority,
-                                child: Text(
-                                  item.priority??"",
-                                  style: TextStyle(fontSize: 9),
+                              ),
+                              child: DropdownButton<String>(
+                                underline: SizedBox.shrink(),
+                                menuMaxHeight: 150,
+                                isExpanded: true,
+                                hint: Padding(
+                                  padding: EdgeInsets.fromLTRB(15, 0, 0, 0),
+                                  child: Text(
+                                    assigne,
+                                    style: TextStyle(
+                                        fontSize: 12, color: Colors.black),
+                                    textAlign: TextAlign.center,
+                                  ),
                                 ),
-                              ))
-                          .toList(),
-                      onChanged: (item) {
-                        setState(() {
-                          priority = item.toString();
-                                     priorityid = myprority.firstWhere(
-                (employee) => item == (employee.priority??""),
-                
-              ).priorityId??0;
-                        });
-                        print(item);
-                      }),
-                )),
-
-            Container(
-                width: MediaQuery.of(context).size.width * 0.9,
-                margin: EdgeInsets.all(10),
-                height: MediaQuery.of(context).size.height * 0.07,
-                decoration: BoxDecoration(
-
-                    // borderRadius: BorderRadius.circular(),
-                    color: Colors.white),
-                child: InputDecorator(
-                  decoration: const InputDecoration(
-                      labelText: "Assign To",
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(8)),
-                      )),
-                  child: DropdownButton<String>(
-                      underline: Text(""),
-                      menuMaxHeight: 150,
-                      isExpanded: true,
-                      borderRadius: BorderRadius.circular(25),
-                      hint: Padding(
-                          padding: EdgeInsets.fromLTRB(15, 0, 0, 0),
-                          child: Text(
-                            assigne,
-                            style: TextStyle(fontSize: 10, color: Colors.black),
-                            textAlign: TextAlign.center,
-                          )),
-                      items: collboraotrs
-                          .map((item) => DropdownMenuItem<String>(
-                                value:"${ item.firstName??""} ${item.lastName??""}",
-                                child: Text(
-                                  "${ item.firstName??""} ${item.lastName??""}",
-                                  style: TextStyle(fontSize: 9),
+                                items: collboraotrs
+                                    .map((item) => DropdownMenuItem<String>(
+                                          value:
+                                              "${item.firstName ?? ""} ${item.lastName ?? ""}",
+                                          child: Text(
+                                            "${item.firstName ?? ""} ${item.lastName ?? ""}",
+                                            style: TextStyle(fontSize: 12),
+                                          ),
+                                        ))
+                                    .toList(),
+                                onChanged: (item) {
+                                  setState(() {
+                                    assigne = item ?? '';
+                                    assingnid = collboraotrs
+                                            .firstWhere(
+                                              (assignee) =>
+                                                  item ==
+                                                  ("${assignee.firstName ?? ""} ${assignee.lastName ?? ""}"),
+                                            )
+                                            .userId ??
+                                        0;
+                                  });
+                                  print(item);
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Container(
+                            margin: EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: InputDecorator(
+                              decoration: const InputDecoration(
+                                contentPadding: EdgeInsets.symmetric(
+                                    vertical: 2, horizontal: 7),
+                                labelText: "Status",
+                                border: OutlineInputBorder(
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(8)),
                                 ),
-                              ))
-                          .toList(),
-                      onChanged: (item) {
-                        setState(() {
-                          assigne = item.toString();
-                                     assingnid = collboraotrs.firstWhere(
-                (employee) => item == ("${ employee.firstName??""} ${employee.lastName??""}"),
-                
-              ).userId??0;
-                        });
-                        print(item);
-                      }),
-                )),
-
-            Container(
-                width: MediaQuery.of(context).size.width * 0.9,
-                margin: EdgeInsets.all(10),
-                height: MediaQuery.of(context).size.height * 0.07,
-                decoration: BoxDecoration(
-                    // borderRadius: BorderRadius.circular(),
-                    color: Colors.white),
-                child: InputDecorator(
-                  decoration: const InputDecoration(
-                      labelText: "Status",
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(8)),
-                      )),
-                  child: DropdownButton<String>(
-                      underline: Text(""),
-                      menuMaxHeight: 150,
-                      isExpanded: true,
-                      borderRadius: BorderRadius.circular(25),
-                      hint: Padding(
-                          padding: EdgeInsets.fromLTRB(15, 0, 0, 0),
-                          child: Text(
-                            Status,
-                            style: TextStyle(fontSize: 10, color: Colors.black),
-                            textAlign: TextAlign.center,
-                          )),
-                      items: myStatus
-                          .map((item) => DropdownMenuItem<String>(
-                                value: item.taskStatus??"",
-                                child: Text(
-                                  item.taskStatus??"New Status",
-                                  style: TextStyle(fontSize: 9),
+                              ),
+                              child: DropdownButton<String>(
+                                underline: SizedBox.shrink(),
+                                menuMaxHeight: 150,
+                                isExpanded: true,
+                                hint: Padding(
+                                  padding: EdgeInsets.fromLTRB(15, 0, 0, 0),
+                                  child: Text(
+                                    Status,
+                                    style: TextStyle(
+                                        fontSize: 12, color: Colors.black),
+                                    textAlign: TextAlign.center,
+                                  ),
                                 ),
-                              ))
-                          .toList(),
-                      onChanged: (item) {
-                        setState(() {
-                          Status = item.toString();
-                                 statusid = myStatus.firstWhere(
-                (employee) => item == (employee.taskStatus??""),
-                
-              ).taskStatusId??0;
-                        });
-                        print(item);
-                      }),
-                )),
-            Container(
-                width: MediaQuery.of(context).size.width * 0.9,
-                margin: EdgeInsets.all(10),
-                height: MediaQuery.of(context).size.height * 0.07,
-                decoration: BoxDecoration(
-
-                    // borderRadius: BorderRadius.circular(),
-                    color: Colors.white),
-                child: InputDecorator(
-                  decoration: const InputDecoration(
-                      labelText: "Task Type",
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(8)),
-                      )),
-                  child: DropdownButton<String>(
-                      underline: Text(""),
-                      menuMaxHeight: 150,
-                      isExpanded: true,
-                      borderRadius: BorderRadius.circular(25),
-                      hint: Padding(
-                          padding: EdgeInsets.fromLTRB(15, 0, 0, 0),
-                          child: Text(
-                            task,
-                            style: TextStyle(fontSize: 10, color: Colors.black),
-                            textAlign: TextAlign.center,
-                          )),
-                      items: getTasks
-                          .map((item) => DropdownMenuItem<String>(
-                                value: item.taskType,
-                                child: Text(
-                                  item.taskType??"",
-                                  style: TextStyle(fontSize: 9),
+                                items: myStatus
+                                    .map((item) => DropdownMenuItem<String>(
+                                          value: item.taskStatus ?? "",
+                                          child: Text(
+                                            item.taskStatus ?? "New Status",
+                                            style: TextStyle(fontSize: 12),
+                                          ),
+                                        ))
+                                    .toList(),
+                                onChanged: (item) {
+                                  setState(() {
+                                    Status = item ?? '';
+                                    statusid = myStatus
+                                            .firstWhere(
+                                              (status) =>
+                                                  item ==
+                                                  (status.taskStatus ?? ""),
+                                            )
+                                            .taskStatusId ??
+                                        0;
+                                  });
+                                  print(item);
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            margin: EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: InputDecorator(
+                              decoration: const InputDecoration(
+                                contentPadding: EdgeInsets.symmetric(
+                                    vertical: 2, horizontal: 7),
+                                labelText: "Task Type",
+                                border: OutlineInputBorder(
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(8)),
                                 ),
-                              ))
-                          .toList(),
-                      onChanged: (item) {
-                        setState(() {
-                          task = item.toString();
-                                 taskTypeid = getTasks.firstWhere(
-                (employee) => item == (employee.taskType??""),
-                
-              ).taskTypeId??0;
-                        });
-                        print(item);
-                      }),
-                )),
-            Container(
-                width: MediaQuery.of(context).size.width * 0.9,
-                margin: EdgeInsets.all(10),
-                height: MediaQuery.of(context).size.height * 0.07,
-                decoration: BoxDecoration(
-
-                    // borderRadius: BorderRadius.circular(),
-                    color: Colors.white),
-                child:MultiSelectDropDown(
-                      searchEnabled: true,
-                      padding: EdgeInsets.all(5),
-                      onOptionSelected: (value) {
-                        setState(() {
-                          assignedtp = value;
-                        });
-                      },
-                      options: 
-                          collboraotrs.map((e) => ValueItem(
-                              label: (e.firstName ?? "") +
-                                  " " +
-                                  (e.lastName ?? ""),
-                              value: e.userId))
-                          .toList()),),
-
-            SizedBox(
-              height: MediaQuery.of(context).size.height * 0.02,
-            ),
-            Card(
-              color: Colors.white,
-              elevation: 14,
-              child: Container(
-                margin: EdgeInsets.all(10),
-                width: MediaQuery.of(context).size.width * 0.9,
-                height: MediaQuery.of(context).size.height * 0.2,
-                child: Table(
-                  border: const TableBorder(
-                      horizontalInside: BorderSide(color: Colors.black)),
-                  children: [
-                    const TableRow(children: [
-                      Padding(padding: EdgeInsets.all(10), child: Text("Date")),
-                      Padding(
-                          padding: EdgeInsets.all(10),
-                          child: Text("Start Date")),
-                      Padding(
-                          padding: EdgeInsets.all(10), child: Text("End Date")),
-                    ]),
-                    TableRow(children: [
-                      const Padding(
-                          padding: EdgeInsets.all(5), child: Text("Est")),
-                      Padding(
-                          padding: const EdgeInsets.all(5),
-                          child: GetDatePicker(
-                            getselectedate: esStart,
-                            getexacttime: (date) {
+                              ),
+                              child: DropdownButton<String>(
+                                underline: SizedBox.shrink(),
+                                menuMaxHeight: 150,
+                                isExpanded: true,
+                                hint: Padding(
+                                  padding: EdgeInsets.fromLTRB(15, 0, 0, 0),
+                                  child: Text(
+                                    task,
+                                    style: TextStyle(
+                                        fontSize: 12, color: Colors.black),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                                items: getTasks
+                                    .map((item) => DropdownMenuItem<String>(
+                                          value: item.taskType,
+                                          child: Text(
+                                            item.taskType ?? "",
+                                            style: TextStyle(fontSize: 12),
+                                          ),
+                                        ))
+                                    .toList(),
+                                onChanged: (item) {
+                                  setState(() {
+                                    task = item ?? '';
+                                    taskTypeid = getTasks
+                                            .firstWhere(
+                                              (taskType) =>
+                                                  item ==
+                                                  (taskType.taskType ?? ""),
+                                            )
+                                            .taskTypeId ??
+                                        0;
+                                  });
+                                  print(item);
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                            child: Container(
+                          margin: EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            //color: Colors.white,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                          child: MultiSelectDropDown(
+                            searchEnabled: true,
+                            padding: EdgeInsets.all(10),
+                            onOptionSelected: (value) {
                               setState(() {
-                                    esStart=date;
+                                assignedtp = value;
                               });
                             },
-                          )),
-                      Padding(
-                          padding: const EdgeInsets.all(5),
-                          child: GetDatePicker(
-                            getselectedate: esEnd,
-                            getexacttime: (date) {},
-                          )),
-                    ]),
-                    TableRow(children: [
-                      const Padding(
-                          padding: EdgeInsets.all(5), child: Text("Plan")),
-                      Padding(
-                          padding: const EdgeInsets.all(5),
-                          child: GetDatePicker(
-                            getselectedate: planStart,
-                            getexacttime: (date) {},
-                          )),
-                      Padding(
-                          padding: const EdgeInsets.all(5),
-                          child: GetDatePicker(
-                            getselectedate: planEnd,
-                            getexacttime: (date) {},
-                          )),
-                    ]),
-                    TableRow(children: [
-                      const Padding(
-                          padding: EdgeInsets.all(5), child: Text("Actual")),
-                      Padding(
-                          padding: const EdgeInsets.all(5),
-                          child: GetDatePicker(
-                            getselectedate: actStart,
-                            getexacttime: (date) {},
-                          )),
-                      Padding(
-                          padding: const EdgeInsets.all(5),
-                          child: GetDatePicker(
-                            getselectedate: actEnd,
-                            getexacttime: (date) {},
-                          )),
-                    ]),
-                  ],
-                ),
-              ),
-            ),
+                            options: collboraotrs
+                                .map((e) => ValueItem(
+                                      label:
+                                          "${e.firstName ?? ""} ${e.lastName ?? ""}",
+                                      value: e.userId,
+                                    ))
+                                .toList(),
+                          ),
+                        )),
+                      ],
+                    ),
 
-            SizedBox(
-              height: MediaQuery.of(context).size.height * 0.025,
-            ),
+                    SizedBox(
+                      height: MediaQuery.of(context).size.height * 0.02,
+                    ),
+                    Card(
+                      color: Colors.white,
+                      elevation: 14,
+                      child: Container(
+                        margin: EdgeInsets.all(10),
+                        width: MediaQuery.of(context).size.width * 0.9,
+                        height: MediaQuery.of(context).size.height * 0.2,
+                        child: Table(
+                          border: const TableBorder(
+                              horizontalInside:
+                                  BorderSide(color: Colors.black)),
+                          children: [
+                            const TableRow(children: [
+                              Padding(
+                                  padding: EdgeInsets.all(10),
+                                  child: Text("Date")),
+                              Padding(
+                                  padding: EdgeInsets.all(10),
+                                  child: Text("Start Date")),
+                              Padding(
+                                  padding: EdgeInsets.all(10),
+                                  child: Text("End Date")),
+                            ]),
+                            TableRow(children: [
+                              const Padding(
+                                  padding: EdgeInsets.all(5),
+                                  child: Text("Est")),
+                              Padding(
+                                  padding: const EdgeInsets.all(5),
+                                  child: GetDatePicker(
+                                    getselectedate: esStart,
+                                    getexacttime: (date) {
+                                      setState(() {
+                                        esStart = date;
+                                      });
+                                    },
+                                  )),
+                              Padding(
+                                  padding: const EdgeInsets.all(5),
+                                  child: GetDatePicker(
+                                    getselectedate: esEnd,
+                                    getexacttime: (date) {},
+                                  )),
+                            ]),
+                            TableRow(children: [
+                              const Padding(
+                                  padding: EdgeInsets.all(5),
+                                  child: Text("Plan")),
+                              Padding(
+                                  padding: const EdgeInsets.all(5),
+                                  child: GetDatePicker(
+                                    getselectedate: planStart,
+                                    getexacttime: (date) {},
+                                  )),
+                              Padding(
+                                  padding: const EdgeInsets.all(5),
+                                  child: GetDatePicker(
+                                    getselectedate: planEnd,
+                                    getexacttime: (date) {},
+                                  )),
+                            ]),
+                            TableRow(children: [
+                              const Padding(
+                                  padding: EdgeInsets.all(5),
+                                  child: Text("Actual")),
+                              Padding(
+                                  padding: const EdgeInsets.all(5),
+                                  child: GetDatePicker(
+                                    getselectedate: actStart,
+                                    getexacttime: (date) {},
+                                  )),
+                              Padding(
+                                  padding: const EdgeInsets.all(5),
+                                  child: GetDatePicker(
+                                    getselectedate: actEnd,
+                                    getexacttime: (date) {},
+                                  )),
+                            ]),
+                          ],
+                        ),
+                      ),
+                    ),
 
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                OutlinedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                    child: const Text(
-                      "Cancel",
-                      style: TextStyle(color: Colors.black),
-                    )),
-                SizedBox(
-                  width: 10,
-                ),
-           OutlinedButton(
-      onPressed: _isLoading ? null : _submitTask,
-      child: _isLoading
-          ? CircularProgressIndicator() // Loader when in progress
-          : const Text(
-              "Save",
-              style: TextStyle(color: Colors.black),
-            ),
-    ),
-                SizedBox(
-                  width: 10,
-                ),
-              ],
-            ),
+                    SizedBox(
+                      height: MediaQuery.of(context).size.height * 0.025,
+                    ),
 
-            SizedBox(
-              height: MediaQuery.of(context).size.height * 0.025,
-            ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        OutlinedButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                            },
+                            child: const Text(
+                              "Cancel",
+                              style: TextStyle(color: Colors.black),
+                            )),
+                        SizedBox(
+                          width: 10,
+                        ),
+                        OutlinedButton(
+                          onPressed: _isLoading ? null : _submitTask,
+                          child: _isLoading
+                              ? CircularProgressIndicator()
+                              : const Text(
+                                  "Save",
+                                  style: TextStyle(color: Colors.black),
+                                ),
+                        ),
+                        SizedBox(
+                          width: 10,
+                        ),
+                      ],
+                    ),
 
-            //------
+                    SizedBox(
+                      height: MediaQuery.of(context).size.height * 0.025,
+                    ),
 
-            // Text(editingtext.getPlainText().toString()),
-          ]),
-        ));
+                    //------
+
+                    // Text(editingtext.getPlainText().toString()),
+                  ]),
+            )));
+  }
+
+  Widget _buildCheckbox(
+      String label, bool value, ValueChanged<bool?> onChanged) {
+    return Row(
+      children: [
+        Checkbox(value: value, onChanged: onChanged),
+        Text(
+          label,
+          style: TextStyle(fontSize: 14),
+        ),
+      ],
+    );
   }
 
   Future<void> _submitTask() async {
@@ -704,7 +866,8 @@ class AddTaskState extends State<AddTask> {
     });
 
     SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
-    final url = Uri.parse('https://portalwiz.net/laravelapi/public/api/add_project_tasks');
+    final url = Uri.parse(
+        'https://portalwiz.net/laravelapi/public/api/add_project_tasks');
 
     var requestBody = {
       "account_id": "${widget.accid}",
@@ -716,7 +879,8 @@ class AddTaskState extends State<AddTask> {
       "est_start_date": "${esStart.year}-${esStart.month}-${esStart.day}",
       "est_end_date": "${esEnd.year}-${esEnd.month}-${esEnd.day}",
       "task_status": "${statusid}",
-      "plan_start_date": "${planStart.year}-${planStart.month}-${planStart.day}",
+      "plan_start_date":
+          "${planStart.year}-${planStart.month}-${planStart.day}",
       "plan_end_date": "${planEnd.year}-${planEnd.month}-${planEnd.day}",
       "act_start_date": "",
       "act_end_date": "",
@@ -743,7 +907,10 @@ class AddTaskState extends State<AddTask> {
       );
 
       if (response.statusCode == 200) {
-       Get.showSnackbar(GetSnackBar(title: "Task Status",message: response.body,));
+        Get.showSnackbar(GetSnackBar(
+          title: "Task Status",
+          message: response.body,
+        ));
       } else {
         print('Server Error: ${response.statusCode} - ${response.body}');
       }
@@ -755,8 +922,6 @@ class AddTaskState extends State<AddTask> {
       });
     }
   }
-
-  
 }
 
 class GetDatePicker extends StatefulWidget {
@@ -795,7 +960,6 @@ class GetDatePickerState extends State<GetDatePicker> {
       ),
     );
   }
-
 }
 
 String deltaToHtml(Delta delta) {
@@ -821,4 +985,3 @@ String deltaToHtml(Delta delta) {
 
   return buffer.toString();
 }
-

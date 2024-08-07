@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:bms/ApiCalls/apiCalls.dart';
+import 'package:bms/Screens/LeaveBalances.dart';
 import 'package:bms/Screens/UpcomingLeaves.dart';
+import 'package:bms/Screens/creditleave.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -63,7 +65,7 @@ class _LeaveRequestState extends State<LeaveRequest> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     int? userId = prefs.getInt('user_id');
     if (userId != null) {
-      await ApiCalls.fetchAndStoreEmployeeId(userId, '1100');
+      await ApiCalls.fetchAndStoreEmployeeId('1100');
     } else {
       print('User ID not found in SharedPreferences');
     }
@@ -71,7 +73,7 @@ class _LeaveRequestState extends State<LeaveRequest> {
 
   Future<void> fetchWFHData() async {
     try {
-      List<dynamic> data = await ApiCalls.fetchAllWFH('1');
+      List<dynamic> data = await ApiCalls.fetchAllWFH('1100');
       setState(() {
         wfhRequests = data;
       });
@@ -191,18 +193,35 @@ class _LeaveRequestState extends State<LeaveRequest> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 5,
+      length: 6,
       child: Scaffold(
         appBar: AppBar(
           title: Text('Leave List'),
           actions: [
-            IconButton(
-              icon: Icon(
-                Icons.calendar_today,
+            Tooltip(
+              message: 'Credit / Debit Leave',
+              child: IconButton(
+                icon: Icon(Icons.add),
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return CreditLeaveDialog();
+                    },
+                  );
+                },
               ),
-              onPressed: () {
-                _selectDate(context);
-              },
+            ),
+            Tooltip(
+              message: 'See Calender',
+              child: IconButton(
+                icon: Icon(
+                  Icons.calendar_today,
+                ),
+                onPressed: () {
+                  _selectDate(context);
+                },
+              ),
             ),
           ],
           bottom: PreferredSize(
@@ -211,6 +230,7 @@ class _LeaveRequestState extends State<LeaveRequest> {
               isScrollable: true,
               tabs: [
                 Tab(text: 'Leaves'),
+                Tab(text: 'Leave Balances'),
                 Tab(text: 'WFH'),
                 Tab(text: 'Approved'),
                 Tab(text: 'Upcoming Leaves'),
@@ -222,6 +242,7 @@ class _LeaveRequestState extends State<LeaveRequest> {
         body: TabBarView(
           children: [
             _buildLeaveRequestList(leaveRequests),
+            LeaveBalancePage(),
             _buildWFHRequestList(wfhRequests),
             _buildApprovedRequestList(
                 [...approvedLeaveRequests, ...approvedWfhRequests]),
@@ -542,6 +563,18 @@ class _LeaveRequestState extends State<LeaveRequest> {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   Widget _buildWFHRequestList(List<dynamic> requests) {
+    if (requests.isEmpty) {
+      return Center(
+        child: Text(
+          'No data found',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey,
+          ),
+        ),
+      );
+    }
     return ListView.builder(
       itemCount: requests.length,
       itemBuilder: (context, index) {
@@ -552,9 +585,6 @@ class _LeaveRequestState extends State<LeaveRequest> {
 
   void _updateWFHStatus(String wfhId, String status, String comment) {
     ApiCalls.updateWFHStatus(wfhId, status, comment).then((_) {
-      setState(() {
-        fetchWFHData();
-      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(status == '1'
@@ -562,6 +592,7 @@ class _LeaveRequestState extends State<LeaveRequest> {
               : 'WFH request rejected successfully'),
         ),
       );
+      fetchWFHData();
     }).catchError((error) {
       print('Error updating WFH request status: $error');
     });
@@ -763,9 +794,6 @@ class _LeaveRequestState extends State<LeaveRequest> {
                   );
                 } else {
                   ApiCalls.updateWFHStatus(wfhId, status, comment).then((_) {
-                    setState(() {
-                      fetchWFHData();
-                    });
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(status == '1'
@@ -774,6 +802,7 @@ class _LeaveRequestState extends State<LeaveRequest> {
                       ),
                     );
                     Navigator.of(context).pop();
+                    fetchWFHData();
                   }).catchError((error) {
                     print('Error updating WFH status: $error');
                     Navigator.of(context).pop();
@@ -991,7 +1020,7 @@ class _LeaveRequestState extends State<LeaveRequest> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      deniedRequest['employee_name'],
+                      deniedRequest['employee_name'] ?? "null",
                       style: TextStyle(
                         fontSize: 16.0,
                         fontWeight: FontWeight.bold,

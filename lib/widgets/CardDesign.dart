@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:animated_emoji/emoji.dart';
 import 'package:bms/Screens/AddTime.dart';
 import 'package:bms/pojos/models/CardPojodata.dart';
 import 'package:bms/Screens/Comment.dart';
@@ -13,6 +16,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_rating_stars/flutter_rating_stars.dart';
+import 'package:http/http.dart' as http;
+import '../pojos/models/RatingCollaboratorpojo.dart';
+import 'package:animated_emoji/animated_emoji.dart';
 
 class myCards1 extends StatefulWidget {
   myCards1(
@@ -26,12 +33,18 @@ class myCards1 extends StatefulWidget {
       required this.todate,
       required this.assigne,
       super.key,
+      required this.projectid,
+      required this.star,
+      required this.emoji,
       required this.index,
       required this.isFocused,
       required this.data,
       required this.refresh});
 
   final int index;
+  final int projectid;
+  int? star, emoji;
+
   final List<TaskStatusDropdown> mydata;
   final List<PrioritysDropdown> priority;
   final List<Collaborators> colab;
@@ -49,18 +62,29 @@ class _myCards1State extends State<myCards1> {
 
   TimeOfDay? mynew = TimeOfDay(hour: 12, minute: 00);
   TimeOfDay? mynew1 = TimeOfDay(hour: 12, minute: 00);
-  var review = TextEditingController();
+  var revise = TextEditingController();
   var comment = TextEditingController();
   DateTime todays = DateTime.now();
-  bool isLoading=false;
+  bool isLoading = false;
   String Status = "Status";
   String priority = "Priority";
-  int role_id=0;
+  int role_id = 0;
   DateTime selectedDate = DateTime.now();
   DateTime timesheetdate = DateTime.now();
   DateTime toselectedDate = DateTime.now();
+  List<collaboratorsList> rating = [];
   List<String> colborators = [];
+  bool isExternal = false;
+
   Color col = const Color.fromRGBO(255, 255, 231, 1);
+  // static String baseurl="https://pw-bms-dev.portalwiz.in/laravelapi/public/api/";
+  static String baseurl = "https://portalwiz.net/laravelapi/public/api/";
+  List<AnimatedEmojiData> emojidata = [
+    AnimatedEmojis.angry,
+    AnimatedEmojis.sad,
+    AnimatedEmojis.slightlyHappy,
+    AnimatedEmojis.smile
+  ];
   @override
   void initState() {
     for (int i = 0; i < widget.colab.length; i++) {
@@ -73,11 +97,49 @@ class _myCards1State extends State<myCards1> {
     super.initState();
   }
 
-  getrole()async{
-    SharedPreferences sharedPreferences=await SharedPreferences.getInstance();
-setState(() {
-  role_id=sharedPreferences.getInt("role_id")??0;
-});
+  getrole() async {
+    SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
+    setState(() {
+      role_id = sharedPreferences.getInt("role_id") ?? 0;
+    });
+  }
+
+  Future<void> fetchAssigneeCollaborators(int projectTaskId) async {
+    final url =
+        'https://pw-bms-dev.portalwiz.in/laravelapi/public/api/fetch_assignee_collaborators';
+
+    // Prepare the request body
+    final body = {
+      'project_task_id': "${projectTaskId}",
+    };
+
+    try {
+      rating.clear();
+      // Send POST request
+      final response = await http.post(
+        Uri.parse(url),
+        body: body,
+      );
+
+      // Check if the request was successful
+      if (response.statusCode == 200) {
+        // Decode the response body
+        final List<dynamic> data = jsonDecode(response.body);
+
+        // Handle the response data
+        for (var item in data) {
+          rating.add(collaboratorsList.fromJson(item));
+          // You can further process each item as needed
+        }
+        print(rating);
+      } else {
+        // Handle the error
+        print('Failed to load data. Status code: ${response.statusCode}');
+      }
+    } catch (e) {
+      // Handle exceptions
+      print('An error occurred: $e');
+    }
   }
 
   @override
@@ -109,9 +171,9 @@ setState(() {
                   ),
                   Container(
                     width: MediaQuery.of(context).size.width * 0.6,
-                    child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Text(
+                    child: Wrap(
+                      children: [
+                        Text(
                           widget.Title,
                           style: GoogleFonts.getFont(
                             'Lato',
@@ -119,10 +181,11 @@ setState(() {
                             fontSize: 12,
                             color: Colors.black,
                           ),
-                          maxLines: 1,
                           softWrap: true,
-                          overflow: TextOverflow.fade,
-                        )),
+                          overflow: TextOverflow.visible,
+                        ),
+                      ],
+                    ),
                   ),
                 ]),
                 Expanded(
@@ -143,7 +206,7 @@ setState(() {
               ],
             ),
             const SizedBox(
-              height: 8,
+              height: 10,
             ),
             Row(children: [
               InkWell(
@@ -175,18 +238,20 @@ setState(() {
                 width: 5,
               ),
               Expanded(
-                  child: Text(
-                widget.description,
-                style: GoogleFonts.getFont(
-                  'Lato',
-                  textStyle: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
+                child: Text(
+                  widget.description,
+                  style: GoogleFonts.getFont(
+                    'Lato',
+                    textStyle: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
                   ),
+                  maxLines: null,
+                  softWrap: true,
+                  overflow: TextOverflow.visible,
                 ),
-                maxLines: 2,
-                softWrap: false,
-              )),
+              ),
               SizedBox(
                 width: 5,
               ),
@@ -319,33 +384,33 @@ setState(() {
                     decoration: BoxDecoration(
                         // borderRadius: BorderRadius.circular(24),
                         color: Colors.white),
-                    child: DropdownButton<String>(
+                    child: DropdownButton(
                         underline: Text(""),
                         menuMaxHeight: 210,
                         isExpanded: true,
                         borderRadius: BorderRadius.circular(20),
-                        hint: Padding(
-                            padding: EdgeInsets.fromLTRB(15, 0, 0, 0),
-                            child: Text(
-                              Status,
-                              style: GoogleFonts.getFont(
-                                'Lato',
-                                textStyle: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black,
-                                ),
-                              ),
-                            )),
+                        // hint: Padding(
+                        //     padding: EdgeInsets.fromLTRB(15, 0, 0, 0),
+                        //     child: Text(
+                        //       Status,
+                        //       style: GoogleFonts.getFont(
+                        //         'Lato',
+                        //         textStyle: TextStyle(
+                        //           fontSize: 12,
+                        //           fontWeight: FontWeight.bold,
+                        //           color: Colors.black,
+                        //         ),
+                        //       ),
+                        //     )),
                         items: widget.mydata
-                            .map((item) => DropdownMenuItem<String>(
+                            .map((item) => DropdownMenuItem(
                                 value: item.taskStatus,
                                 child: Text(
-                                  item.taskStatus??"",
+                                  item.taskStatus ?? "",
                                   style: GoogleFonts.getFont(
                                     'Lato',
                                     textStyle: TextStyle(
-                                      fontSize: 12,
+                                      fontSize: 15,
                                     ),
                                   ),
                                   overflow: TextOverflow.fade,
@@ -371,7 +436,7 @@ setState(() {
                     decoration: BoxDecoration(
                         // borderRadius: BorderRadius.circular(),
                         color: Colors.white),
-                    child: DropdownButton<String>(
+                    child: DropdownButton(
                         underline: Text(""),
                         isExpanded: true,
                         borderRadius: BorderRadius.circular(20),
@@ -390,14 +455,14 @@ setState(() {
                               textAlign: TextAlign.center,
                             )),
                         items: widget.priority
-                            .map((item) => DropdownMenuItem<String>(
+                            .map((item) => DropdownMenuItem(
                                 value: item.priority,
                                 child: Text(
-                                  item.priority??"",
+                                  item.priority ?? "",
                                   style: GoogleFonts.getFont(
                                     'Lato',
                                     textStyle: TextStyle(
-                                      fontSize: 12,
+                                      fontSize: 15,
                                     ),
                                   ),
                                 )))
@@ -654,189 +719,265 @@ setState(() {
                             )))
                   ],
                 )),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
-              GestureDetector(
-                  onTap: () {
-                    getTimeSheetData();
-                  },
-                  child: Icon(
-                    Icons.schedule_rounded,
-                    size: 24,
-                  )
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      GestureDetector(
+                          onTap: () {
+                            getTimeSheetData();
+                          },
+                          child: Icon(
+                            Icons.schedule_rounded,
+                            size: 24,
+                          )
 
-                  // Text('Add Time',style: TextStyle(fontWeight: FontWeight.w600,color: Colors.blueAccent), // )
+                          // Text('Add Time',style: TextStyle(fontWeight: FontWeight.w600,color: Colors.blueAccent), // )
 
-                  ),
-            (true)?  PopupMenuButton<PopupMenu>(
-                  surfaceTintColor: Colors.white,
-                  icon: const Icon(
-                    Icons.select_all,
-                    size: 28,
-                  ),
-                  onSelected: (value) async {
-                    if (value.name.toString() == "ProjectComment") {
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => CommentPage(
-                                    accid:
-                                        dataOfCards[widget.index].accountId ??
-                                            1,
-                                    projectId:
-                                        dataOfCards[widget.index].projectId ??
-                                            0,
-                                    projecttaskid: dataOfCards[widget.index]
-                                            .projectTaskId ??
-                                        0,
-                                    created_by:
-                                        dataOfCards[widget.index].createdBy ??
-                                            0,
-                                    showProject: true,
-                                  )));
-                    } else if (value.name.toString() == "Add") {
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => AddTask(
-                                    title: widget.Title,
-                                    accid:
-                                        dataOfCards[widget.index].accountId ??
-                                            1,
-                                    projecid:
-                                        dataOfCards[widget.index].projectId ??
-                                            36,
-                                  )));
-                    } else if (value.name.toString() == "Delete") {
-                      showDialog(
-                          context: context,
-                          builder: (context) {
-                            return AlertDialog(
-                              backgroundColor: Colors.white,
-                              title: const Text(
-                                "Are you Sure ?",
-                                style: TextStyle(
-                                    fontSize: 22, fontWeight: FontWeight.w400),
+                          ),
+                      SizedBox(
+                        width: 20,
+                      ),
+                      (true)
+                          ? PopupMenuButton<PopupMenu>(
+                              surfaceTintColor: Colors.white,
+                              icon: const Icon(
+                                Icons.select_all,
+                                size: 28,
                               ),
-                              actions: [
-                                ElevatedButton(
-                                    style: const ButtonStyle(
-                                        backgroundColor:
-                                            MaterialStatePropertyAll(
-                                                Colors.white)),
-                                    onPressed: () {
-                                      Navigator.pop(context);
-                                    },
-                                    child: const Text(
-                                      "Cancel",
-                                      style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w300,
-                                          color: Colors.black),
-                                    )),
-                                ElevatedButton(
-                                    style: const ButtonStyle(
-                                        backgroundColor:
-                                            MaterialStatePropertyAll(
-                                                Colors.redAccent)),
-                                    onPressed: () async {
-                                      await ApiCalls.deleteTaskbyUser(
-                                          dataOfCards[widget.index].accountId ??
-                                              1,
-                                          dataOfCards[widget.index]
-                                                  .projectTaskId ??
-                                              0,
-                                          context);
-                                    },
-                                    child: const Text(
-                                      "Delete",
-                                      style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w300,
-                                          color: Colors.white),
-                                    )),
-                              ],
-                            );
-                          });
-                    }
-                  },
-                  itemBuilder: (context) => const [
-                     PopupMenuItem(
-                            value: PopupMenu.Add,
-                            child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    "Add Task",
-                                    style: TextStyle(fontSize: 12),
-                                  ),
-                                  Icon(Icons.add)
-                                ])),
-                        PopupMenuItem(
-                            value: PopupMenu.Edit,
-                            child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    "Edit Task",
-                                    style: TextStyle(fontSize: 12),
-                                  ),
-                                  Icon(Icons.edit)
-                                ])),
-                        PopupMenuItem(
-                            value: PopupMenu.Delete,
-                            child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    "Delete Task",
-                                    style: TextStyle(fontSize: 12),
-                                  ),
-                                  Icon(Icons.delete_outline)
-                                ])),
-                        PopupMenuItem(
-                            value: PopupMenu.ProjectComment,
-                            child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    "Project Comment",
-                                    style: TextStyle(fontSize: 12),
-                                  ),
-                                  Icon(Icons.comment_bank_outlined)
-                                ])),
-                      ]):Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                             
+                              onSelected: (value) async {
+                                if (value.name.toString() == "ProjectComment") {
+                                  Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) => CommentPage(
+                                                accid: dataOfCards[widget.index]
+                                                        .accountId ??
+                                                    1,
+                                                projectId:
+                                                    dataOfCards[widget.index]
+                                                            .projectId ??
+                                                        0,
+                                                projecttaskid:
+                                                    dataOfCards[widget.index]
+                                                            .projectTaskId ??
+                                                        0,
+                                                created_by:
+                                                    dataOfCards[widget.index]
+                                                            .createdBy ??
+                                                        0,
+                                                showProject: true,
+                                              )));
+                                } else if (value.name.toString() == "Add") {
+                                  Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) => AddTask(
+                                                title: widget.Title,
+                                                accid: dataOfCards[widget.index]
+                                                        .accountId ??
+                                                    1,
+                                                projecid:
+                                                    dataOfCards[widget.index]
+                                                            .projectId ??
+                                                        36,
+                                              )));
+                                } else if (value.name.toString() == "Delete") {
+                                  showDialog(
+                                      context: context,
+                                      builder: (context) {
+                                        return AlertDialog(
+                                          backgroundColor: Colors.white,
+                                          title: const Text(
+                                            "Are you Sure ?",
+                                            style: TextStyle(
+                                                fontSize: 22,
+                                                fontWeight: FontWeight.w400),
+                                          ),
+                                          actions: [
+                                            ElevatedButton(
+                                                style: const ButtonStyle(
+                                                    backgroundColor:
+                                                        MaterialStatePropertyAll(
+                                                            Colors.white)),
+                                                onPressed: () {
+                                                  Navigator.pop(context);
+                                                },
+                                                child: const Text(
+                                                  "Cancel",
+                                                  style: TextStyle(
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.w300,
+                                                      color: Colors.black),
+                                                )),
+                                            ElevatedButton(
+                                                style: const ButtonStyle(
+                                                    backgroundColor:
+                                                        MaterialStatePropertyAll(
+                                                            Colors.redAccent)),
+                                                onPressed: () async {
+                                                  await ApiCalls.deleteTaskbyUser(
+                                                      dataOfCards[widget.index]
+                                                              .accountId ??
+                                                          1,
+                                                      dataOfCards[widget.index]
+                                                              .projectTaskId ??
+                                                          0,
+                                                      context);
+                                                },
+                                                child: const Text(
+                                                  "Delete",
+                                                  style: TextStyle(
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.w300,
+                                                      color: Colors.white),
+                                                )),
+                                          ],
+                                        );
+                                      });
+                                }
+                              },
+                              itemBuilder: (context) => const [
+                                    PopupMenuItem(
+                                        value: PopupMenu.Add,
+                                        child: Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceAround,
+                                            children: [
+                                              Text(
+                                                "Add Task",
+                                                style: TextStyle(fontSize: 12),
+                                              ),
+                                              Icon(Icons.add)
+                                            ])),
+                                    PopupMenuItem(
+                                        value: PopupMenu.Edit,
+                                        child: Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(
+                                                "Edit Task",
+                                                style: TextStyle(fontSize: 12),
+                                              ),
+                                              Icon(Icons.edit)
+                                            ])),
+                                    PopupMenuItem(
+                                        value: PopupMenu.Delete,
+                                        child: Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(
+                                                "Delete Task",
+                                                style: TextStyle(fontSize: 12),
+                                              ),
+                                              Icon(Icons.delete_outline)
+                                            ])),
+                                    PopupMenuItem(
+                                        value: PopupMenu.ProjectComment,
+                                        child: Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(
+                                                "Project Comment",
+                                                style: TextStyle(fontSize: 12),
+                                              ),
+                                              Icon(Icons.comment_bank_outlined)
+                                            ])),
+                                  ])
+                          : Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
                                   GestureDetector(
-                                    onTap: (){
+                                      onTap: () {
                                         Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => CommentPage(
-                                    accid:
-                                        dataOfCards[widget.index].accountId ??
-                                            1,
-                                    projectId:
-                                        dataOfCards[widget.index].projectId ??
-                                            0,
-                                    projecttaskid: dataOfCards[widget.index]
-                                            .projectTaskId ??
-                                        0,
-                                    created_by:
-                                        dataOfCards[widget.index].createdBy ??
-                                            0,
-                                    showProject: true,
-                                  )));
-                                    },
-                                    child: Icon(Icons.comment_bank_outlined))
+                                            context,
+                                            MaterialPageRoute(
+                                                builder: (context) =>
+                                                    CommentPage(
+                                                      accid: dataOfCards[
+                                                                  widget.index]
+                                                              .accountId ??
+                                                          1,
+                                                      projectId: dataOfCards[
+                                                                  widget.index]
+                                                              .projectId ??
+                                                          0,
+                                                      projecttaskid: dataOfCards[
+                                                                  widget.index]
+                                                              .projectTaskId ??
+                                                          0,
+                                                      created_by: dataOfCards[
+                                                                  widget.index]
+                                                              .createdBy ??
+                                                          0,
+                                                      showProject: true,
+                                                    )));
+                                      },
+                                      child: Icon(Icons.comment_bank_outlined))
                                 ]),
-            ])
+                    ]),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    GestureDetector(
+                      onTap: () async {
+                        print(widget.projectid);
+                        await fetchAssigneeCollaborators(widget.projectid);
+                        showDialog(
+                            context: context,
+                            builder: (context) {
+                              return ListView.builder(
+                                  itemCount: rating.length,
+                                  itemBuilder: (context, index) {
+                                    return CollaboratorsCard(
+                                      collaborator: rating[index],
+                                      callback: () =>
+                                          fetchAssigneeCollaborators(
+                                              widget.projectid),
+                                    );
+                                  });
+                            });
+                      },
+                      child: RatingStars(
+                        axis: Axis.horizontal,
+                        value: (widget.star ?? 0).toDouble(),
+                        starCount: 5,
+                        starSize: 18,
+                        valueLabelColor: const Color(0xff9b9b9b),
+                        valueLabelRadius: 10,
+                        maxValue: 5,
+                        starSpacing: 2,
+                        maxValueVisibility: true,
+                        valueLabelVisibility: false,
+                        animationDuration: Duration(milliseconds: 1000),
+                        valueLabelPadding: const EdgeInsets.symmetric(
+                            vertical: 1, horizontal: 8),
+                        valueLabelMargin: const EdgeInsets.only(right: 8),
+                        starOffColor: const Color(0xffe7e8ea),
+                        starColor: Colors.yellow,
+                        angle: 12,
+                      ),
+                    ),
+                    SizedBox(
+                      width: 15,
+                    ),
+                    Visibility(
+                        visible: !(widget.emoji == null),
+                        child: AnimatedEmoji(
+                          emojidata[widget.emoji ?? 0],
+                          size: 28,
+                        )),
+                  ],
+                ),
+              ],
+            )
           ],
         ),
       ),
@@ -844,71 +985,59 @@ setState(() {
   }
 
   void getTimeSheetData() {
-   showDialog(
-  context: context,
-  builder: (context) {
-    return StatefulBuilder(
-      builder: (context, setState) {
-        return Dialog(
-          child: Container(
-            width: MediaQuery.of(context).size.width * 0.95,
-            height: MediaQuery.of(context).size.height * 0.39,
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(16)),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                SizedBox(height: 20),
-                Padding(
-                  padding: EdgeInsets.fromLTRB(15, 2, 20, 2),
-                  child: Row(
-                    children: [
-                      Icon(Icons.calendar_month, size: 16),
-                      SizedBox(width: 4),
-                      Text(
-                        "${timesheetdate.year}-${timesheetdate.month}-${timesheetdate.day}",
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                    ],
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: SingleChildScrollView(
+                child: Container(
+                  width: MediaQuery.of(context).size.width * 0.9,
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 15.0, vertical: 10),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Expanded(
-                        child: Text(
-                          widget.description,
-                          style: GoogleFonts.getFont(
-                            'Lato',
-                            textStyle: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
+                      Row(
+                        children: [
+                          Icon(Icons.calendar_month, size: 16),
+                          SizedBox(width: 4),
+                          Text(
+                            "${timesheetdate.year}-${timesheetdate.month}-${timesheetdate.day}",
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey.shade600,
                             ),
                           ),
+                        ],
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        widget.description,
+                        style: GoogleFonts.getFont(
+                          'Lato',
+                          textStyle: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
                         ),
-                      )
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(left: 15.0),
-                  child: Table(
-                    textBaseline: TextBaseline.ideographic,
-                    defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                    children: [
-                      TableRow(
+                      ),
+                      SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                "Start",
-                                style: TextStyle(fontSize: 14),
-                              ),
-                              SizedBox(width: 5),
+                              Text("Start", style: TextStyle(fontSize: 14)),
                               GetTime(
                                 getselected: (p0) {
                                   setState(() {
@@ -918,13 +1047,10 @@ setState(() {
                               ),
                             ],
                           ),
-                          Row(
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                "End",
-                                style: TextStyle(fontSize: 14),
-                              ),
-                              SizedBox(width: 5),
+                              Text("End", style: TextStyle(fontSize: 14)),
                               GetTime(
                                 getselected: (p0) {
                                   setState(() {
@@ -934,132 +1060,356 @@ setState(() {
                               ),
                             ],
                           ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text("Total Hrs:",
+                                  style: TextStyle(fontSize: 14)),
+                              SizedBox(width: 5),
+                              Text("8"),
+                            ],
+                          ),
                         ],
                       ),
-                      TableRow(
+                      SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Container(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 10.0),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    "Review: ",
-                                    style: TextStyle(fontSize: 14),
-                                  ),
-                                  Container(
-                                    width: 50,
-                                    child: TextField(
-                                      controller: review,
-                                      keyboardType: TextInputType.number,
-                                      decoration: InputDecoration(
-                                        contentPadding: EdgeInsets.zero,
-                                        isDense: true,
-                                        border: OutlineInputBorder(),
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                          Row(
+                            children: [
+                              Text("Rev:", style: TextStyle(fontSize: 14)),
+                              IconButton(
+                                icon: Icon(Icons.remove, size: 16),
+                                onPressed: () {
+                                  int value = int.tryParse(revise.text) ?? 0;
+                                  setState(() {
+                                    if (value > 0) value--;
+                                    revise.text = value.toString();
+                                  });
+                                },
                               ),
-                            ),
+                              Container(
+                                width: 40,
+                                child: TextField(
+                                  controller: revise,
+                                  keyboardType: TextInputType.number,
+                                  textAlign: TextAlign.center,
+                                  decoration: InputDecoration(
+                                    contentPadding: EdgeInsets.zero,
+                                    isDense: true,
+                                    border: OutlineInputBorder(),
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.add, size: 16),
+                                onPressed: () {
+                                  int value = int.tryParse(revise.text) ?? 0;
+                                  setState(() {
+                                    value++;
+                                    revise.text = value.toString();
+                                  });
+                                },
+                              ),
+                            ],
                           ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 10.0),
-                            child: Row(
-                              children: [
-                                Text("Total Hrs:"),
-                                SizedBox(width: 5),
-                                Text("8"),
-                              ],
-                            ),
+                          Row(
+                            children: [
+                              Text("Ex:", style: TextStyle(fontSize: 14)),
+                              Switch(
+                                value: isExternal,
+                                onChanged: (bool value) {
+                                  setState(() {
+                                    isExternal = value;
+                                  });
+                                },
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                ),
-                Container(
-                  margin: EdgeInsets.all(10),
-                  child: Row(
-                    children: [
-                      Flexible(
-                        child: TextFormField(
-                          decoration: InputDecoration(
-                            labelText: "Comment",
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
+                      SizedBox(height: 16),
+                      TextFormField(
+                        decoration: InputDecoration(
+                          labelText: "Comment",
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                          controller: comment,
-                          minLines: 2,
-                          maxLines: null,
-                          keyboardType: TextInputType.multiline,
+                        ),
+                        controller: comment,
+                        minLines: 2,
+                        maxLines: null,
+                        keyboardType: TextInputType.multiline,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Comment is required';
+                          }
+                          return null;
+                        },
+                      ),
+                      SizedBox(height: 16),
+                      Align(
+                        alignment: Alignment.bottomRight,
+                        child: Container(
+                          width: MediaQuery.of(context).size.width * 0.4,
+                          height: MediaQuery.of(context).size.height * 0.04,
+                          child: isLoading
+                              ? Center(child: CircularProgressIndicator())
+                              : ElevatedButton(
+                                  onPressed: () async {
+                                    if (comment.text.isEmpty) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content: Text('Comment is required'),
+                                        ),
+                                      );
+                                      return;
+                                    }
+
+                                    setState(() {
+                                      isLoading = true;
+                                    });
+                                    bool response =
+                                        await ApiCalls.addTimeSheetOfProject(
+                                      dataOfCards[widget.index].projectTaskId ??
+                                          0,
+                                      dataOfCards[widget.index].accountId ?? 0,
+                                      dataOfCards[widget.index].projectId ?? 0,
+                                      dataOfCards[widget.index].actStartDate ??
+                                          "00/00/0000",
+                                      dataOfCards[widget.index].actEndDate ??
+                                          "00/00/0000",
+                                      dataOfCards[widget.index].taskStatus ?? 0,
+                                      dataOfCards[widget.index].priorityId ?? 0,
+                                      dataOfCards[widget.index].assingedTo ?? 0,
+                                      dataOfCards[widget.index].createdBy ?? 0,
+                                      dataOfCards[widget.index].taskDesc ?? "",
+                                      "${timesheetdate.year}/${timesheetdate.month}/${timesheetdate.day}",
+                                      comment.text.toString(),
+                                      mynew!.format(context),
+                                      mynew1!.format(context),
+                                    );
+                                    setState(() {
+                                      isLoading = !response;
+                                    });
+                                    revise.clear();
+                                    comment.clear();
+
+                                    if (response) {
+                                      setState(() {
+                                        isLoading = false;
+                                      });
+
+                                      Navigator.pop(context);
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            "Time Sheet Updated",
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                          backgroundColor: Colors.transparent,
+                                        ),
+                                      );
+                                    }
+                                  },
+                                  child: Text("Submit"),
+                                ),
                         ),
                       ),
                     ],
                   ),
                 ),
-                SizedBox(height: MediaQuery.of(context).size.height * 0.01),
-                Align(
-                  alignment: Alignment.bottomRight,
-                  child: Container(
-                    margin: EdgeInsets.fromLTRB(0, 0, 10, 0),
-                    width: MediaQuery.of(context).size.width * 0.4,
-                    height: MediaQuery.of(context).size.height * 0.04,
-                    child: isLoading
-                        ? Center(child: CircularProgressIndicator())
-                        : ElevatedButton(
-                            onPressed: () async {
-                              setState(() {
-                                isLoading = true;
-                              });
-                              bool response = await ApiCalls.addTimeSheetOfProject(
-                                dataOfCards[widget.index].projectTaskId ?? 0,
-                                dataOfCards[widget.index].accountId ?? 0,
-                                dataOfCards[widget.index].projectId ?? 0,
-                                dataOfCards[widget.index].actStartDate ?? "00/00/0000",
-                                dataOfCards[widget.index].actEndDate ?? "00/00/0000",
-                                dataOfCards[widget.index].taskStatus ?? 0,
-                                dataOfCards[widget.index].priorityId ?? 0,
-                                dataOfCards[widget.index].assingedTo ?? 0,
-                                dataOfCards[widget.index].createdBy ?? 0,
-                                dataOfCards[widget.index].taskDesc ?? "",
-                                "${timesheetdate.year}/${timesheetdate.month}/${timesheetdate.day}",
-                                comment.text.toString(),
-                                mynew!.format(context),
-                                mynew1!.format(context),
-                              );
-                              setState(() {
-                                isLoading = !response;
-                              });
-                review.clear();
-                              comment.clear();
-
-                              if(response){
-
-                                setState(() {
-                                   isLoading = false;
-                                });
-
-                                Navigator.pop(context);
-                             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Time Sheet Updated",style: TextStyle(color: Colors.white,),),backgroundColor: Colors.transparent,));
-                              }
-                            },
-                            child: Text("Submit"),
-                          ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
-  },
-);
-
   }
 }
 
 enum PopupMenu { Add, Edit, Delete, ProjectComment }
+
+class CollaboratorsCard extends StatefulWidget {
+  final collaboratorsList collaborator;
+  Function callback;
+
+  CollaboratorsCard({required this.collaborator, required this.callback});
+
+  @override
+  _CollaboratorsCardState createState() => _CollaboratorsCardState();
+}
+
+class _CollaboratorsCardState extends State<CollaboratorsCard> {
+  TextEditingController _commentController = TextEditingController();
+  bool _isEmojisVisible = false;
+  int? _selectedEmoji;
+  double starValue = 0;
+  AnimatedEmojiData? animatedEmojiData;
+
+  void _toggleEmojis() {
+    setState(() {
+      _isEmojisVisible = !_isEmojisVisible;
+    });
+  }
+
+  void _submitComment() async {
+    // Handle comment submission
+    SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
+    await ApiCalls.addProjectTasksByUser(
+        accountId: sharedPreferences.getInt("account_id") ?? 0,
+        roleId: sharedPreferences.getInt("role_id") ?? 0,
+        userId: sharedPreferences.getInt("user_id") ?? 0,
+        projectTaskId: widget.collaborator.projectTaskId ?? 0,
+        assigneeId: widget.collaborator.assigneeId,
+        lkFeedbackId: starValue.round(),
+        smileyId: _selectedEmoji ?? 0,
+        comment: _commentController.text);
+    //print({"accountId":sharedPreferences.getInt("account_id")??0, 'roleId': sharedPreferences.getInt("role_id")??0, 'userId': sharedPreferences.getInt("user_id")??0, "projectTaskId": widget.collaborator.projectTaskId??0, "assigneeId":widget.collaborator.assigneeId , "lkFeedbackId": starValue.round(), "smileyId": _selectedEmoji??0, "comment": _commentController.text});
+    print('Comment submitted: ${_commentController.text}');
+    widget.callback();
+    _commentController.clear();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 6,
+      margin: EdgeInsets.all(10),
+      color: Colors.grey[200],
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    widget.collaborator.name ?? '',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Colors.black87),
+                  ),
+                ),
+                SizedBox(width: 8),
+                Text(
+                  widget.collaborator.displayName ?? '',
+                  style: TextStyle(fontSize: 14, color: Colors.black54),
+                ),
+              ],
+            ),
+            SizedBox(height: 5),
+            Row(
+              children: [
+                Expanded(
+                  child: RatingStars(
+                    axis: Axis.horizontal,
+                    value: starValue,
+                    onValueChanged: (v) {
+                      setState(() {
+                        starValue = v;
+                      });
+                    },
+                    starCount: 5,
+                    starSize: 24,
+                    valueLabelColor: const Color(0xff9b9b9b),
+                    valueLabelRadius: 10,
+                    maxValue: 5,
+                    starSpacing: 2,
+                    maxValueVisibility: true,
+                    valueLabelVisibility: false,
+                    animationDuration: Duration(milliseconds: 1000),
+                    valueLabelPadding:
+                        const EdgeInsets.symmetric(vertical: 1, horizontal: 8),
+                    valueLabelMargin: const EdgeInsets.only(right: 8),
+                    starOffColor: const Color(0xffe7e8ea),
+                    starColor: Colors.yellow,
+                    angle: 12,
+                  ),
+                ),
+                IconButton(
+                  icon: AnimatedEmoji(
+                    _selectedEmoji != null
+                        ? animatedEmojiData ?? AnimatedEmojis.slightlyHappy
+                        : AnimatedEmojis.slightlyHappy,
+                    size: 30,
+                  ),
+                  onPressed: _toggleEmojis,
+                ),
+              ],
+            ),
+            if (_isEmojisVisible)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconButton(
+                    icon: AnimatedEmoji(AnimatedEmojis.angry, size: 24),
+                    onPressed: () => setState(() {
+                      _selectedEmoji = 0;
+                      animatedEmojiData = AnimatedEmojis.angry;
+                    }),
+                  ),
+                  IconButton(
+                    icon: AnimatedEmoji(AnimatedEmojis.sad, size: 24),
+                    onPressed: () => setState(() {
+                      _selectedEmoji = 1;
+                      animatedEmojiData = AnimatedEmojis.sad;
+                    }),
+                  ),
+                  IconButton(
+                    icon: AnimatedEmoji(AnimatedEmojis.slightlyHappy, size: 24),
+                    onPressed: () => setState(() {
+                      _selectedEmoji = 2;
+                      animatedEmojiData = AnimatedEmojis.slightlyHappy;
+                    }),
+                  ),
+                  IconButton(
+                    icon: AnimatedEmoji(AnimatedEmojis.smile, size: 24),
+                    onPressed: () => setState(() {
+                      _selectedEmoji = 3;
+                      animatedEmojiData = AnimatedEmojis.smile;
+                    }),
+                  ),
+                ],
+              ),
+            SizedBox(height: 5),
+            TextField(
+              controller: _commentController,
+              decoration: InputDecoration(
+                contentPadding: EdgeInsets.only(left: 5),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                hintText: 'Enter your comment',
+                filled: true,
+                fillColor: Colors.white,
+              ),
+              maxLines: 2,
+            ),
+            SizedBox(height: 5),
+            Center(
+              child: ElevatedButton(
+                onPressed: _submitComment,
+                child: Text('Submit'),
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

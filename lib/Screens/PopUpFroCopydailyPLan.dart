@@ -4,7 +4,6 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
-
 class ProjectManagerPopup extends StatefulWidget {
   const ProjectManagerPopup({required this.planid});
   final int? planid;
@@ -18,7 +17,7 @@ class _ProjectManagerPopupState extends State<ProjectManagerPopup> {
   String? _selectedEmployee;
   TextEditingController _entryController = TextEditingController();
   bool _isPlanCompleted = false;
-List<dynamic> _employeeList = [];
+  List<dynamic> _employeeList = [];
   List<dynamic> _teamsList = [];
   int? _selectedTeam;
   // static String baseurl="https://pw-bms-dev.portalwiz.in/laravelapi/public/api";
@@ -37,65 +36,68 @@ List<dynamic> _employeeList = [];
   //     setState(() {
   //       _employeeList = employees;
   //       // Fetch the plan after fetching employees
-  //       fetchPlan(); 
+  //       fetchPlan();
   //     });
   //   } catch (e) {
   //     print('Error fetching employees: $e');
   //   }
   // }
-Future<void> fetchPlan() async {
-  if (widget.planid != null) {
-    try {
-      final response = await http.post(
-        Uri.parse('https://portalwiz.net/laravelapi/public/api/fetch_single_daily_plan'),
-        body: {"plan_id": "${widget.planid}"},
-      );
+  Future<void> fetchPlan() async {
+    if (widget.planid != null) {
+      try {
+        final response = await http.post(
+          Uri.parse(
+              'https://portalwiz.net/laravelapi/public/api/fetch_single_daily_plan'),
+          body: {"plan_id": "${widget.planid}"},
+        );
 
-      print(response.body + " new Responseee....");
+        print(response.body + " new Responseee....");
 
-      if (response.statusCode == 200) {
-        final List<dynamic> responseData = jsonDecode(response.body);
-        if (responseData.isNotEmpty) {
-          final data = responseData[0];
-          bool functionData = await fetchTeamEmployees(data['team_id']);
+        if (response.statusCode == 200) {
+          final List<dynamic> responseData = jsonDecode(response.body);
+          if (responseData.isNotEmpty) {
+            final data = responseData[0];
+            bool functionData = await fetchTeamEmployees(data['team_id']);
 
-          setState(() {
-            _selectedDate = data['plan_date'] != null ? DateTime.parse(data['plan_date']).add(Duration(days: 1)) : DateTime.now();
-            _entryController.text = data['plan_name'] ?? "";
-            _isPlanCompleted = data['status'] == 1;
-            _selectedTeam = data['team_id'];
+            setState(() {
+              _selectedDate = data['plan_date'] != null
+                  ? DateTime.parse(data['plan_date']).add(Duration(days: 1))
+                  : DateTime.now();
+              _entryController.text = data['plan_name'] ?? "";
+              _isPlanCompleted = data['status'] == 1;
+              _selectedTeam = data['team_id'];
 
-            if (data['user_id'] != null && functionData) {
-              try {
-                final selectedEmployee = _employeeList.firstWhere(
-                  (employee) => employee['user_id'].toString() == data['user_id'].toString(),
-                  
-                );
-                _selectedEmployee = selectedEmployee != null
-                    ? '${selectedEmployee['first_name']} ${selectedEmployee['last_name']}'
-                    : "No EMp";
-              } catch (e) {
-                print('Employee not found: $e');
-                _selectedEmployee = null;
+              if (data['user_id'] != null && functionData) {
+                try {
+                  final selectedEmployee = _employeeList.firstWhere(
+                    (employee) =>
+                        employee['user_id'].toString() ==
+                        data['user_id'].toString(),
+                  );
+                  _selectedEmployee = selectedEmployee != null
+                      ? '${selectedEmployee['first_name']} ${selectedEmployee['last_name']}'
+                      : "No EMp";
+                } catch (e) {
+                  print('Employee not found: $e');
+                  _selectedEmployee = null;
+                }
               }
-            }
-          });
+            });
+          } else {
+            print('No data found.');
+          }
         } else {
-          print('No data found.');
+          print('Failed to fetch plan. Status code: ${response.statusCode}');
         }
-      } else {
-        print('Failed to fetch plan. Status code: ${response.statusCode}');
+      } catch (e) {
+        print('Error fetching plan: $e');
       }
-    } catch (e) {
-      print('Error fetching plan: $e');
+    } else {
+      print('Plan ID is null');
     }
-  } else {
-    print('Plan ID is null');
   }
-}
 
-
- Future<bool> fetchTeamEmployees(int teamId) async {
+  Future<bool> fetchTeamEmployees(int teamId) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     try {
       var url = Uri.parse('${baseurl}/fetch_team_employee');
@@ -109,23 +111,19 @@ Future<void> fetchPlan() async {
         body: jsonEncode({
           "team_id": [teamId],
           "account_id": "${prefs.getInt("account_id")}",
-          "user_id":["${prefs.getInt("user_id")}"]
+          "user_id": ["${prefs.getInt("user_id")}"]
         }),
       );
-    
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        List<Map<String, dynamic>> employees = List<Map<String, dynamic>>.from(data);
-        
+        List<Map<String, dynamic>> employees =
+            List<Map<String, dynamic>>.from(data);
+
         if (mounted) {
           setState(() {
             _employeeList = jsonDecode(response.body);
-       
           });
-
-         
-      
         }
         return true;
       } else {
@@ -137,11 +135,6 @@ Future<void> fetchPlan() async {
       return false;
     }
   }
-
-
-
-
-  
 
   Future<void> fetchTeams() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -176,9 +169,11 @@ Future<void> fetchPlan() async {
       return;
     }
 
-    final selectedEmployee = _employeeList.firstWhere((employee) =>
-        employee['first_name'] + ' ' + employee['last_name'] == _selectedEmployee,
-      );
+    final selectedEmployee = _employeeList.firstWhere(
+      (employee) =>
+          employee['first_name'] + ' ' + employee['last_name'] ==
+          _selectedEmployee,
+    );
 
     if (selectedEmployee == null) {
       print('Selected employee not found');
@@ -197,9 +192,8 @@ Future<void> fetchPlan() async {
 
     try {
       bool success;
-  
-        success = await ApiCalls.addDailyPlan(requestBody);
-      
+
+      success = await ApiCalls.addDailyPlan(requestBody);
 
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -226,158 +220,160 @@ Future<void> fetchPlan() async {
 
   @override
   Widget build(BuildContext context) {
-    return  SingleChildScrollView(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Card(
-              elevation: 8.0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10.0),
-              ),
-              child: Container(
-                width: MediaQuery.of(context).size.width * 0.9,
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Daily Plans',
+    return SingleChildScrollView(
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Card(
+            elevation: 8.0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10.0),
+            ),
+            child: Container(
+              width: MediaQuery.of(context).size.width * 0.9,
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Copy Plans',
+                        style: TextStyle(
+                          fontSize: 18.0,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Checkbox(
+                        value: _isPlanCompleted,
+                        onChanged: (bool? value) {
+                          setState(() {
+                            _isPlanCompleted = value ?? false;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 16.0),
+                  // Date Picker Row
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.calendar_today, color: Colors.blue),
+                      SizedBox(width: 8.0),
+                      TextButton(
+                        onPressed: () async {
+                          DateTime? pickedDate = await showDatePicker(
+                            context: context,
+                            initialDate: _selectedDate,
+                            firstDate: DateTime(2000),
+                            lastDate: DateTime(2101),
+                          );
+                          if (pickedDate != null && pickedDate != _selectedDate)
+                            setState(() {
+                              _selectedDate = pickedDate;
+                            });
+                        },
+                        child: Text(
+                          "${_selectedDate.toLocal()}".split(' ')[0],
                           style: TextStyle(
-                            fontSize: 18.0,
+                            color: Colors.blue,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        Checkbox(
-                          value: _isPlanCompleted,
-                          onChanged: (bool? value) {
-                            setState(() {
-                              _isPlanCompleted = value ?? false;
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 16.0),
-                    // Date Picker Row
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.calendar_today, color: Colors.blue),
-                        SizedBox(width: 8.0),
-                        TextButton(
-                          onPressed: () async {
-                            DateTime? pickedDate = await showDatePicker(
-                              context: context,
-                              initialDate: _selectedDate,
-                              firstDate: DateTime(2000),
-                              lastDate: DateTime(2101),
-                            );
-                            if (pickedDate != null && pickedDate != _selectedDate)
-                              setState(() {
-                                _selectedDate = pickedDate;
-                              });
-                          },
-                          child: Text(
-                            "${_selectedDate.toLocal()}".split(' ')[0],
-                            style: TextStyle(
-                              color: Colors.blue,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 16.0),
-                     
-                       
-                      ],
-                    ),
-                    SizedBox(height: 16.0),
-                    // New Dropdown for Teams
-                    DropdownButtonFormField<int>(
-                      decoration: InputDecoration(
-                        labelText: 'Select Team',
-                        labelStyle: TextStyle(fontSize: 14),
-                        contentPadding: EdgeInsets.symmetric(vertical: 0.0, horizontal: 8.0),
-                        isDense: true,
                       ),
-                      value: _selectedTeam,
-                      onChanged: (int? newValue) {
-                        setState(() {
-                          _selectedTeam = newValue;
-                          if (_selectedTeam != null) {
-                            fetchTeamEmployees(_selectedTeam!); // Fetch employees when team changes
-                          }
-                        });
-                      },
-                      items: _teamsList.map<DropdownMenuItem<int>>((team) {
-                        return DropdownMenuItem<int>(
-                          value: team['team_id'],
-                          child: Text(
-                            team['team_name'],
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        );
-                      }).toList(),
+                      SizedBox(width: 16.0),
+                    ],
+                  ),
+                  SizedBox(height: 16.0),
+                  // New Dropdown for Teams
+                  DropdownButtonFormField<int>(
+                    decoration: InputDecoration(
+                      labelText: 'Select Team',
+                      labelStyle: TextStyle(fontSize: 14),
+                      contentPadding:
+                          EdgeInsets.symmetric(vertical: 0.0, horizontal: 8.0),
+                      isDense: true,
                     ),
-                    SizedBox(height: 16.0),
-                    // Dropdown for Employees
-                    DropdownButtonFormField<String>(
-                      decoration: InputDecoration(
-                        labelText: 'Select Employee',
-                        labelStyle: TextStyle(fontSize: 14),
-                        contentPadding: EdgeInsets.symmetric(vertical: 0.0, horizontal: 8.0),
-                        isDense: true,
-                      ),
-                      value: _selectedEmployee,
-                      onChanged: (String? newValue) {
-                        setState(() {
-                          _selectedEmployee = newValue;
-                        });
-                      },
-                      items: _employeeList.map<DropdownMenuItem<String>>((employee) {
-                        final fullName = '${employee['first_name']} ${employee['last_name']}';
-                        return DropdownMenuItem<String>(
-                          value: fullName,
-                          child: Text(
-                            fullName,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                    SizedBox(height: 16.0),
-                    TextFormField(
-                      controller: _entryController,
-                      minLines: 5,
-                      maxLines: 10,
-                      decoration: InputDecoration(
-                        labelText: 'Enter Plan',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10.0),
+                    value: _selectedTeam,
+                    onChanged: (int? newValue) {
+                      setState(() {
+                        _selectedTeam = newValue;
+                        if (_selectedTeam != null) {
+                          fetchTeamEmployees(
+                              _selectedTeam!); // Fetch employees when team changes
+                        }
+                      });
+                    },
+                    items: _teamsList.map<DropdownMenuItem<int>>((team) {
+                      return DropdownMenuItem<int>(
+                        value: team['team_id'],
+                        child: Text(
+                          team['team_name'],
+                          overflow: TextOverflow.ellipsis,
                         ),
+                      );
+                    }).toList(),
+                  ),
+                  SizedBox(height: 16.0),
+                  // Dropdown for Employees
+                  DropdownButtonFormField<String>(
+                    decoration: InputDecoration(
+                      labelText: 'Select Employee',
+                      labelStyle: TextStyle(fontSize: 14),
+                      contentPadding:
+                          EdgeInsets.symmetric(vertical: 0.0, horizontal: 8.0),
+                      isDense: true,
+                    ),
+                    value: _selectedEmployee,
+                    onChanged: (String? newValue) {
+                      setState(() {
+                        _selectedEmployee = newValue;
+                      });
+                    },
+                    items:
+                        _employeeList.map<DropdownMenuItem<String>>((employee) {
+                      final fullName =
+                          '${employee['first_name']} ${employee['last_name']}';
+                      return DropdownMenuItem<String>(
+                        value: fullName,
+                        child: Text(
+                          fullName,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  SizedBox(height: 16.0),
+                  TextFormField(
+                    controller: _entryController,
+                    minLines: 5,
+                    maxLines: 10,
+                    decoration: InputDecoration(
+                      labelText: 'Enter Plan',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10.0),
                       ),
                     ),
-                    SizedBox(height: 8.0),
-                    ElevatedButton(
-                      onPressed: addOrUpdateDailyPlan,
-                      child: Text('Submit Plan'),
-                      style: ElevatedButton.styleFrom(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10.0),
-                        ),
+                  ),
+                  SizedBox(height: 8.0),
+                  ElevatedButton(
+                    onPressed: addOrUpdateDailyPlan,
+                    child: Text('Submit Plan'),
+                    style: ElevatedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10.0),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
         ),
-      );
-    
+      ),
+    );
   }
 }

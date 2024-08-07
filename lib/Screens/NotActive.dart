@@ -21,7 +21,6 @@ class NotActiveState extends State<NotActive> {
     getApiCallsActive();
     super.initState();
     scroller.addListener(_scrollListener);
-
   }
 
   void _onSearchChanged(String val) {
@@ -30,15 +29,17 @@ class NotActiveState extends State<NotActive> {
         print(dataOfCards.length);
         filteredDataOfCards = dataOfCards;
       } else {
-  filteredDataOfCards = dataOfCards
-          .where((card) =>
-              (card.projectName??"").toLowerCase().contains(val.toLowerCase()) ||
-             ( card.taskTypeName??"").toLowerCase().contains(val.toLowerCase()) ||
-              (card.taskName??"").toLowerCase().contains(val.toLowerCase()))
-          .toList();
+        filteredDataOfCards = dataOfCards
+            .where((card) =>
+                (card.projectName ?? "")
+                    .toLowerCase()
+                    .contains(val.toLowerCase()) ||
+                (card.taskTypeName ?? "")
+                    .toLowerCase()
+                    .contains(val.toLowerCase()) ||
+                (card.taskName ?? "").toLowerCase().contains(val.toLowerCase()))
+            .toList();
       }
-
-    
     });
   }
 
@@ -83,17 +84,15 @@ class NotActiveState extends State<NotActive> {
                 padding: const EdgeInsets.all(8.0),
                 child: TextField(
                   controller: searchController,
-                  onChanged: (val){
-                        _onSearchChanged(val);
-                        print(val);
+                  onChanged: (val) {
+                    _onSearchChanged(val);
+                    print(val);
                   },
                   decoration: InputDecoration(
                     contentPadding: EdgeInsets.zero,
                     hintText: 'Search...',
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(22)
-                    ),
-                    
+                        borderRadius: BorderRadius.circular(22)),
                     prefixIcon: Icon(Icons.search),
                   ),
                 ),
@@ -101,6 +100,7 @@ class NotActiveState extends State<NotActive> {
             } else {
               final card = filteredDataOfCards[index - 1];
               return myCards1(
+                projectid: dataOfCards[index].projectTaskId ?? 0,
                 Title: card.projectName ?? "Project Name Here",
                 taskTypeName: card.taskTypeName ?? "Normal",
                 description: card.taskName ?? "Task Name",
@@ -116,6 +116,8 @@ class NotActiveState extends State<NotActive> {
                 refresh: () {
                   getApiCallsActive();
                 },
+                star: dataOfCards[index].lkFeedbackId,
+                emoji: dataOfCards[index].smileyId,
               );
             }
           },

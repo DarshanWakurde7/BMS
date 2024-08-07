@@ -122,9 +122,9 @@ class _AttendanceReportPageState extends State<AttendanceReportPage> {
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
                                           children: [
-                                            Text('Punch Status'),
+                                            Text('Punch In'),
                                             Text(
-                                              attendance['punchStatus'],
+                                              attendance['punchInTime'] ?? '--',
                                               style: TextStyle(
                                                   fontWeight: FontWeight.bold),
                                             ),
@@ -134,9 +134,22 @@ class _AttendanceReportPageState extends State<AttendanceReportPage> {
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
                                           children: [
-                                            Text('Punch Time'),
+                                            Text('Punch Out'),
                                             Text(
-                                              attendance['punchTime'],
+                                              attendance['punchOutTime'] ??
+                                                  '--',
+                                              style: TextStyle(
+                                                  fontWeight: FontWeight.bold),
+                                            ),
+                                          ],
+                                        ),
+                                        Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text('Total Hours'),
+                                            Text(
+                                              attendance['totalHours'] ?? '--',
                                               style: TextStyle(
                                                   fontWeight: FontWeight.bold),
                                             ),
@@ -155,10 +168,4 @@ class _AttendanceReportPageState extends State<AttendanceReportPage> {
       ),
     );
   }
-}
-
-void main() {
-  runApp(MaterialApp(
-    home: AttendanceReportPage(),
-  ));
 }

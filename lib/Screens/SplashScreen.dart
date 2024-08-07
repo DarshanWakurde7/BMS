@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:bms/ApiCalls/apiCalls.dart';
+import 'package:bms/Screens/DashBoardScreen.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/widgets.dart';
 import 'package:lottie/lottie.dart';
@@ -30,14 +31,13 @@ class SplashScreenState extends State<SplashScreen> {
   void savedData() async {
     final sharedpref = await SharedPreferences.getInstance();
     String email = sharedpref.getString("user_email") ?? "";
-
+    print(email);
     if (!email.isEmpty) {
 //  await ApiCalls.getDataofCards(1.toString());
       await ApiCalls.getDataofCards(2.toString());
 
-
       Navigator.pushReplacement(
-          context, MaterialPageRoute(builder: (context) => LanderPage()));
+          context, MaterialPageRoute(builder: (context) => HomeScreen()));
     } else {
       Navigator.pushReplacement(
           context,
@@ -46,6 +46,12 @@ class SplashScreenState extends State<SplashScreen> {
                     title: "BMS",
                   )));
     }
+  }
+
+  @override
+  void dispose() {
+    // TODO: implement dispose
+    super.dispose();
   }
 
   @override

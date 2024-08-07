@@ -27,11 +27,12 @@ List<Taskdropdown> getTasks = [];
 List<CategorysDropdown> myCategories = [];
 List<PrioritysDropdown> myprority = [];
 List<Commentpojo> myComment = [];
-List<CollaboratorsDropdown> collboraotrs=[];
+List<CollaboratorsDropdown> collboraotrs = [];
 List<TimeSheetPojo> timeSheet = [];
 
 class ApiCalls {
-  // static String baseurl="https://pw-bms-dev.portalwiz.in/laravelapi/public/api/";
+  //static String baseurl =
+  //  "https://pw-bms-dev.portalwiz.in/laravelapi/public/api/";
   static String baseurl = "https://portalwiz.net/laravelapi/public/api/";
 
   static Future<dynamic> getDataofCards(String status_id) async {
@@ -75,7 +76,6 @@ class ApiCalls {
       myStatus.clear();
       for (Map<String, dynamic> i in status) {
         myStatus.add(TaskStatusDropdown.fromJson(i));
-     
       }
       myprority.clear();
       for (Map<String, dynamic> i in priority) {
@@ -195,8 +195,6 @@ class ApiCalls {
   }
 
   static Future<dynamic> gettaskByUser(int accid) async {
-   
-
     Uri url = Uri.parse("${baseurl}fetch_task_types?");
 
     final response = await http.get(url);
@@ -204,11 +202,9 @@ class ApiCalls {
 
     if (response.statusCode == 200) {
       getTasks.clear();
-      
 
       for (Map<String, dynamic> i in jsonDecode(response.body.toString())) {
         getTasks.add(Taskdropdown.fromJson(i));
-     
       }
     }
   }
@@ -231,42 +227,37 @@ class ApiCalls {
     }
   }
 
+  static Future<void> getCollborators(int accid, int projectid) async {
+    var body = {
+      "account_id": accid.toString(),
+      "project_id": [projectid]
+    };
 
-static Future<void> getCollborators(int accid, int projectid) async {
-  var body = {
-    "account_id": accid.toString(),
-    "project_id": [projectid]
-  };
+    Uri url = Uri.parse("${baseurl}fetch_users_by_projects");
 
-  Uri url = Uri.parse("${baseurl}fetch_users_by_projects");
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(body),
+      );
 
-  try {
-    final response = await http.post(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode(body),
-    );
+      if (response.statusCode == 200) {
+        collboraotrs.clear();
 
-    if (response.statusCode == 200) {
-
-          collboraotrs.clear();
-
-      for (Map<String, dynamic> i in jsonDecode(response.body.toString())) {
-        collboraotrs.add(CollaboratorsDropdown.fromJson(i));
-        print(CollaboratorsDropdown.fromJson(i).firstName);
+        for (Map<String, dynamic> i in jsonDecode(response.body.toString())) {
+          collboraotrs.add(CollaboratorsDropdown.fromJson(i));
+          print(CollaboratorsDropdown.fromJson(i).firstName);
+        }
+      } else {
+        print('Failed to load data. Status code: ${response.statusCode}');
+        print('Response body: ${response.body}');
       }
-
-    } else {
-      print('Failed to load data. Status code: ${response.statusCode}');
-      print('Response body: ${response.body}');
-     
+    } catch (e) {
+      print('Error: $e');
     }
-  } catch (e) {
-    print('Error: $e');
- 
-  }
 
     // if (response.statusCode == 200) {
     //   collboraotrs.clear();
@@ -345,7 +336,7 @@ static Future<void> getCollborators(int accid, int projectid) async {
       "start_time": startTime,
       "end_time": endTime
     };
-
+    print("Request body: ${jsonEncode(body)}");
     Uri url = Uri.parse("${baseurl}update_project_task_by_user?");
     http.Response response = await http.post(
       url,
@@ -618,8 +609,6 @@ static Future<void> getCollborators(int accid, int projectid) async {
     }
   }
 
-
-
   static Future<List<dynamic>> fetchProjects(int statusGroupId) async {
     final sharedPref = await SharedPreferences.getInstance();
     int? userId = sharedPref.getInt('user_id');
@@ -651,8 +640,7 @@ static Future<void> getCollborators(int accid, int projectid) async {
   static Future<List<Map<String, dynamic>>> fetchEmployees(
       String accountId) async {
     final response = await http.post(
-      Uri.parse(
-          '${baseurl}/fetch_account_employee'),
+      Uri.parse('${baseurl}/fetch_account_employee'),
       headers: <String, String>{
         'Content-Type': 'application/json; charset=UTF-8',
       },
@@ -678,13 +666,12 @@ static Future<void> getCollborators(int accid, int projectid) async {
   }
 
   static Future<bool> addDailyPlan(Map<String, dynamic> planData) async {
-      
     final response = await http.post(
-      Uri.parse(
-          '${baseurl}add_daily_plan'),
+      Uri.parse('${baseurl}add_daily_plan'),
       body: planData,
-    ); print(response.body);
-   
+    );
+    print(response.body);
+
     if (response.statusCode == 200) {
       final responseBody = json.decode(response.body);
 
@@ -694,97 +681,50 @@ static Future<void> getCollborators(int accid, int projectid) async {
     }
   }
 
-
-
-static Future<bool> updateDailyPlan(Map<String, dynamic> planData) async {
-  try {
-    final response = await http.post(
-      Uri.parse('${baseurl}update_daily_plan'),
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode(planData),
-    );
-
-    if (response.statusCode == 200) {
-      final responseBody = json.decode(response.body);
-      print('Response Body: $responseBody');
-      return responseBody['success'];
-    } else {
-      print('Failed to update data. Status code: ${response.statusCode}');
-      print('Response Body: ${response.body}');
-      return false;
-    }
-  } catch (error) {
-    print('Error occurred: $error');
-    throw Exception('Failed to update data: $error');
-  }
-}
-
-
-
-
-  static Future<bool> addTaskData(Map<String, dynamic> planData) async {
-    final response = await http.post(
-      Uri.parse(
-          '${baseurl}/update_daily_plan'),
- 
-      body: planData,
-    );
-
-    if (response.statusCode == 200) {
-      final responseBody = json.decode(response.body);
-    
-      return responseBody['success'];
-    } else {
-      throw Exception('Failed to insert data');
-    }
-  }
-
-  static Future<void> fetchAndStoreEmployeeId(
-      int userId, String accountId) async {
+  static Future<bool> updateDailyPlan(Map<String, dynamic> planData) async {
     try {
       final response = await http.post(
-        Uri.parse(
-            '${baseurl}/fetch_employees'),
-        headers: <String, String>{
-          'Content-Type': 'application/json; charset=UTF-8',
+        Uri.parse('${baseurl}update_daily_plan'),
+        headers: {
+          'Content-Type': 'application/json',
         },
-        body: jsonEncode(<String, dynamic>{
-          'account_id': accountId,
-          'user_id': userId,
-        }),
+        body: jsonEncode(planData),
       );
 
       if (response.statusCode == 200) {
         final responseBody = json.decode(response.body);
-        final employee = responseBody['users'].firstWhere(
-          (user) => user['user_id'] == userId,
-          orElse: () => null,
-        );
-
-        if (employee != null) {
-          final String employeeId = employee['employee_id'].toString();
-          SharedPreferences prefs = await SharedPreferences.getInstance();
-          await prefs.setString('employee_id', employeeId);
-          print('Employee ID stored: $employeeId');
-        } else {
-          print('Employee not found for user ID: $userId');
-        }
+        print('Response Body: $responseBody');
+        return responseBody['success'];
       } else {
-        print('Failed to fetch employees, status code: ${response.statusCode}');
-        throw Exception('Failed to fetch employees');
+        print('Failed to update data. Status code: ${response.statusCode}');
+        print('Response Body: ${response.body}');
+        return false;
       }
-    } catch (e) {
-      print('Error in fetchAndStoreEmployeeId: $e');
+    } catch (error) {
+      print('Error occurred: $error');
+      throw Exception('Failed to update data: $error');
+    }
+  }
+
+  static Future<bool> addTaskData(Map<String, dynamic> planData) async {
+    final response = await http.post(
+      Uri.parse('${baseurl}/update_daily_plan'),
+      body: planData,
+    );
+
+    if (response.statusCode == 200) {
+      final responseBody = json.decode(response.body);
+
+      return responseBody['success'];
+    } else {
+      throw Exception('Failed to insert data');
     }
   }
 
   static Future<List<Map<String, dynamic>>> fetchAttendance(
       DateTime date) async {
     final response = await http.post(
-      Uri.parse(
-          '${baseurl}/fetch_all_attendance'),
+      Uri.parse('${baseurl}fetch_all_attendance'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'account_id': '1100'}),
     );
@@ -794,15 +734,26 @@ static Future<bool> updateDailyPlan(Map<String, dynamic> planData) async {
       final String formattedDate =
           "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
 
-      return data
-          .where((item) => item['created_at'].startsWith(formattedDate))
-          .map((item) {
-        return {
-          'username': item['user_name'],
-          'punchStatus': item['punch_status'],
-          'punchTime': item['time'],
-        };
-      }).toList();
+      Map<int, Map<String, String>> userAttendance = {};
+
+      for (var item in data) {
+        if (item['created_at'].startsWith(formattedDate)) {
+          int userId = int.parse(item['user_id']);
+          String username = item['user_name'];
+          String punchInTime = item['punch_in'] ?? '--';
+          String punchOutTime = item['punch_out'] ?? '--';
+          String totalHours = item['total_hours'] ?? '--';
+
+          userAttendance[userId] = {
+            'username': username,
+            'punchInTime': punchInTime,
+            'punchOutTime': punchOutTime,
+            'totalHours': totalHours,
+          };
+        }
+      }
+
+      return userAttendance.values.toList();
     } else {
       throw Exception('Failed to load attendance data');
     }
@@ -875,6 +826,51 @@ static Future<bool> updateDailyPlan(Map<String, dynamic> planData) async {
     print(response.body);
 
     return jsonDecode(response.body)['message'];
+  }
+
+  static Future<void> fetchAndStoreEmployeeId(String accountId) async {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      int? userId = prefs.getInt('user_id');
+
+      if (userId == null) {
+        print('User ID not found in SharedPreferences');
+        return;
+      }
+
+      final response = await http.post(
+        Uri.parse('${baseurl}fetch_employees'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: jsonEncode(<String, dynamic>{
+          'account_id': accountId,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final responseBody = json.decode(response.body);
+        final employee = responseBody['users'].firstWhere(
+          (user) => user['user_id'] == userId,
+          orElse: () => null,
+        );
+
+        if (employee != null) {
+          final String employeeId = employee['employee_id'].toString();
+          await prefs.setString('employee_id', employeeId);
+
+          print('Employee ID stored: $employeeId');
+          print('Employee details: $employee');
+        } else {
+          print('Employee not found for user ID: $userId');
+        }
+      } else {
+        print('Failed to fetch employees, status code: ${response.statusCode}');
+        throw Exception('Failed to fetch employees');
+      }
+    } catch (e) {
+      print('Error in fetchAndStoreEmployeeId: $e');
+    }
   }
 
   static Future<void> addLeave({
@@ -1030,7 +1026,7 @@ static Future<bool> updateDailyPlan(Map<String, dynamic> planData) async {
           'Content-Type': 'application/json; charset=UTF-8',
         },
         body: jsonEncode(<String, dynamic>{
-          'account_id': '1',
+          'account_id': '1100',
           'leave_id': leaveId,
           'employee_id': int.parse(employeeId),
           'leave_status_id': leaveStatusId,
@@ -1118,12 +1114,12 @@ static Future<bool> updateDailyPlan(Map<String, dynamic> planData) async {
 
       final response = await http.post(
         Uri.parse(
-            'https://pw-bms-dev.portalwiz.in/laravelapi/public/api/fetch_single_employee_wfh'),
+            'https://portalwiz.net/laravelapi/public/api/fetch_single_employee_wfh'),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
         },
         body: jsonEncode(<String, dynamic>{
-          'account_id': '1',
+          'account_id': '1100',
           'employee_id': int.parse(employeeId),
         }),
       );
@@ -1141,18 +1137,39 @@ static Future<bool> updateDailyPlan(Map<String, dynamic> planData) async {
 
   static Future<void> updateWFHStatus(
       String wfhId, String status, String comment) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    String? employeeId = prefs.getString('employee_id');
+
+    if (employeeId == null) {
+      throw Exception('Employee ID not found in SharedPreferences');
+    }
+
     final String apiUrl =
         'https://pw-bms-dev.portalwiz.in/laravelapi/public/api/update_wfh';
-    final response = await http.post(Uri.parse(apiUrl), body: {
-      "account_id": "1",
+
+    final Map<String, dynamic> requestBody = {
+      "account_id": "1100",
       "wfh_id": wfhId,
       "wfh_status": status,
       "comment": comment,
-      "updated_by": "1"
-    });
+      "updated_by": employeeId,
+    };
+
+    print('Request Body: ${jsonEncode(requestBody)}');
+
+    final response = await http.post(
+      Uri.parse(apiUrl),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: jsonEncode(requestBody),
+    );
+
     if (response.statusCode == 200) {
       print('WFH status updated successfully');
     } else {
+      print('Failed to update WFH status, status code: ${response.statusCode}');
       throw Exception('Failed to update WFH status');
     }
   }
@@ -1210,13 +1227,15 @@ static Future<bool> updateDailyPlan(Map<String, dynamic> planData) async {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? employeeId = prefs.getString('employee_id');
 
-      if (employeeId == null) {
-        throw Exception('Employee ID not found in SharedPreferences');
+      // Wait until employeeId is not null
+      while (employeeId == null) {
+        await Future.delayed(Duration(milliseconds: 100));
+        employeeId = prefs.getString('employee_id');
       }
 
       final body = {
-        "account_id": 1,
-        "employee_id": int.parse(employeeId),
+        "account_id": 1100,
+        "employee_id": employeeId,
       };
 
       final response = await http.post(
@@ -1246,12 +1265,14 @@ static Future<bool> updateDailyPlan(Map<String, dynamic> planData) async {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? employeeId = prefs.getString('employee_id');
 
-      if (employeeId == null) {
-        throw Exception('Employee ID not found in SharedPreferences');
+      // Wait until employeeId is not null
+      while (employeeId == null) {
+        await Future.delayed(Duration(milliseconds: 100));
+        employeeId = prefs.getString('employee_id');
       }
 
       final body = {
-        "account_id": 1,
+        "account_id": 1100,
         "employee_id": int.parse(employeeId),
       };
 
@@ -1282,13 +1303,15 @@ static Future<bool> updateDailyPlan(Map<String, dynamic> planData) async {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? employeeId = prefs.getString('employee_id');
 
-      if (employeeId == null) {
-        throw Exception('Employee ID not found in SharedPreferences');
+      // Wait until employeeId is not null
+      while (employeeId == null) {
+        await Future.delayed(Duration(milliseconds: 100));
+        employeeId = prefs.getString('employee_id');
       }
 
       final body = {
-        "account_id": 1,
-        "employee_id": int.parse(employeeId), // Convert employee_id to integer
+        "account_id": 1100,
+        "employee_id": int.parse(employeeId),
       };
 
       final response = await http.post(
@@ -1461,13 +1484,71 @@ static Future<bool> updateDailyPlan(Map<String, dynamic> planData) async {
     }
   }
 
+  static Future<void> addProjectTasksByUser({
+    required int accountId,
+    required int roleId,
+    required int userId,
+    required int projectTaskId,
+    required int? assigneeId,
+    int? collaboratorId,
+    required int lkFeedbackId,
+    required int smileyId,
+    required String comment,
+  }) async {
+    final url = Uri.parse('${baseurl}add_feedback_to_project_task');
 
+    final Map<String, dynamic> requestBody = {
+      'account_id': "$accountId",
+      'role_id': "$roleId",
+      'user_id': "$userId",
+      'project_task_id': "$projectTaskId",
+      'assignee_id': (assigneeId == null) ? null : "$assigneeId",
+      'collaborator_id': (collaboratorId == null) ? null : "$collaboratorId",
+      'lk_feedback_id': "$lkFeedbackId",
+      'smiley_id': "$smileyId",
+      'comment': comment,
+    };
+    print(requestBody);
 
-  
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: json.encode(requestBody),
+      );
 
+      if (response.statusCode == 200) {
+        // Handle the response as needed
+        print('Response data: ${response.body}');
+      } else {
+        print(
+            'Failed to fetch project tasks. Status code: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error occurred: $e');
+    }
+  }
 
-
-
-
-  
+  static Future<Map<String, dynamic>> fetchCountfordate() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    try {
+      final response =
+          await http.post(Uri.parse("${baseurl}fetch_daily_plan_count"), body: {
+        "user_id": "${prefs.getInt("user_id")}",
+        "plan_date":
+            "${DateTime.now().year}-${DateTime.now().month}-${DateTime.now().day}"
+      });
+      print(response.body);
+      if (response.statusCode == 200) {
+        print(jsonDecode(response.body));
+        return jsonDecode(response.body);
+      }
+      return {};
+    } catch (e) {
+      print(e);
+      return {};
+    }
+  }
 }

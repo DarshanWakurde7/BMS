@@ -19,7 +19,7 @@ class _LeaveFormState extends State<LeaveForm> {
   List<String> _leaveTypes = ['Casual', 'Sick', 'Elective'];
 
   String? _filePath;
-
+  bool _isSubmitting = false;
   Future<void> _pickFile() async {
     FilePickerResult? result = await FilePicker.platform.pickFiles();
     if (result != null) {
@@ -30,6 +30,9 @@ class _LeaveFormState extends State<LeaveForm> {
   }
 
   Future<void> _submitLeaveRequest() async {
+    setState(() {
+      _isSubmitting = true;
+    });
     try {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       String? employeeIdStr = prefs.getString('employee_id');
@@ -67,6 +70,14 @@ class _LeaveFormState extends State<LeaveForm> {
           backgroundColor: Colors.green,
         ),
       );
+      setState(() {
+        _selectedLeaveType = 'Casual';
+        _fromDate = DateTime.now();
+        _toDate = DateTime.now();
+        _returnDate = DateTime.now();
+        _reason = '';
+        _filePath = null;
+      });
     } catch (e) {
       print('Exception: $e');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -75,6 +86,10 @@ class _LeaveFormState extends State<LeaveForm> {
           backgroundColor: Colors.red,
         ),
       );
+    } finally {
+      setState(() {
+        _isSubmitting = false;
+      });
     }
   }
 
@@ -301,29 +316,32 @@ class _LeaveFormState extends State<LeaveForm> {
                       ],
                     ),
                   SizedBox(height: 16.0),
-                  Center(
-                    child: ElevatedButton(
-                      onPressed: _submitLeaveRequest,
-                      style: ButtonStyle(
-                        backgroundColor:
-                            MaterialStateProperty.all<Color>(Colors.blue),
-                        padding: MaterialStateProperty.all<EdgeInsets>(
-                          EdgeInsets.symmetric(
-                              horizontal: 40.0, vertical: 15.0),
-                        ),
-                        shape:
-                            MaterialStateProperty.all<RoundedRectangleBorder>(
-                          RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10.0),
+                  _isSubmitting
+                      ? Center(child: CircularProgressIndicator())
+                      : Center(
+                          child: ElevatedButton(
+                            onPressed: _submitLeaveRequest,
+                            style: ButtonStyle(
+                              backgroundColor:
+                                  MaterialStateProperty.all<Color>(Colors.blue),
+                              padding: MaterialStateProperty.all<EdgeInsets>(
+                                EdgeInsets.symmetric(
+                                    horizontal: 40.0, vertical: 15.0),
+                              ),
+                              shape: MaterialStateProperty.all<
+                                  RoundedRectangleBorder>(
+                                RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10.0),
+                                ),
+                              ),
+                            ),
+                            child: Text(
+                              'Submit',
+                              style: TextStyle(
+                                  color: Colors.white, fontSize: 16.0),
+                            ),
                           ),
                         ),
-                      ),
-                      child: Text(
-                        'Submit',
-                        style: TextStyle(color: Colors.white, fontSize: 16.0),
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),

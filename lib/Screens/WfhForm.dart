@@ -12,8 +12,11 @@ class _WorkFromHomeFormState extends State<WorkFromHomeForm> {
   DateTime _toDate = DateTime.now();
   DateTime _returnDate = DateTime.now();
   String _reason = '';
-
+  bool _isSubmitting = false;
   Future<void> _submitWorkFromHomeRequest() async {
+    setState(() {
+      _isSubmitting = true;
+    });
     try {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       String? employeeIdStr = prefs.getString('employee_id');
@@ -28,7 +31,7 @@ class _WorkFromHomeFormState extends State<WorkFromHomeForm> {
       final noOfDays = _toDate.difference(_fromDate).inDays + 1;
 
       await ApiCalls.addWFH(
-        accountId: "1",
+        accountId: "1100",
         employeeId: employeeId,
         noOfDays: noOfDays,
         reason: _reason,
@@ -53,6 +56,10 @@ class _WorkFromHomeFormState extends State<WorkFromHomeForm> {
           backgroundColor: Colors.red,
         ),
       );
+    } finally {
+      setState(() {
+        _isSubmitting = false;
+      });
     }
   }
 
@@ -222,29 +229,32 @@ class _WorkFromHomeFormState extends State<WorkFromHomeForm> {
                     maxLines: 3,
                   ),
                   SizedBox(height: 16.0),
-                  Center(
-                    child: ElevatedButton(
-                      onPressed: _submitWorkFromHomeRequest,
-                      style: ButtonStyle(
-                        backgroundColor:
-                            MaterialStateProperty.all<Color>(Colors.blue),
-                        padding: MaterialStateProperty.all<EdgeInsets>(
-                          EdgeInsets.symmetric(
-                              horizontal: 40.0, vertical: 15.0),
-                        ),
-                        shape:
-                            MaterialStateProperty.all<RoundedRectangleBorder>(
-                          RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10.0),
+                  _isSubmitting
+                      ? Center(child: CircularProgressIndicator())
+                      : Center(
+                          child: ElevatedButton(
+                            onPressed: _submitWorkFromHomeRequest,
+                            style: ButtonStyle(
+                              backgroundColor:
+                                  MaterialStateProperty.all<Color>(Colors.blue),
+                              padding: MaterialStateProperty.all<EdgeInsets>(
+                                EdgeInsets.symmetric(
+                                    horizontal: 40.0, vertical: 15.0),
+                              ),
+                              shape: MaterialStateProperty.all<
+                                  RoundedRectangleBorder>(
+                                RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10.0),
+                                ),
+                              ),
+                            ),
+                            child: Text(
+                              'Submit',
+                              style: TextStyle(
+                                  color: Colors.white, fontSize: 16.0),
+                            ),
                           ),
                         ),
-                      ),
-                      child: Text(
-                        'Submit',
-                        style: TextStyle(color: Colors.white, fontSize: 16.0),
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),

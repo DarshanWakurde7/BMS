@@ -1,25 +1,26 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:bms/Screens/Activepage.dart';
 import 'package:bms/Screens/AddProject.dart';
 import 'package:bms/Screens/AttendenceReport.dart';
 import 'package:bms/Screens/DailyTasks.dart';
+import 'package:bms/Screens/DashBoardScreen.dart';
 import 'package:bms/Screens/Enquire.dart';
 import 'package:bms/Screens/NotActive.dart';
-import 'package:bms/Screens/Notification.dart';
-import 'package:bms/Screens/Pmsheet.dart';
+
 import 'package:bms/Screens/QrCode.dart';
 import 'package:bms/Screens/Snooze.dart';
 import 'package:bms/ApiCalls/apiCalls.dart';
 import 'package:bms/Screens/clear.dart';
 import 'package:bms/Screens/complete.dart';
-import 'package:bms/Screens/face_verification.dart';
+
 import 'package:bms/Screens/hold.dart';
 import 'package:bms/Screens/review.dart';
 import 'package:bms/main.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/widgets.dart';
-import 'package:get/get.dart';
+
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lottie/lottie.dart';
 import 'package:maps_toolkit/maps_toolkit.dart' as kit;
@@ -27,6 +28,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_expandable_fab/flutter_expandable_fab.dart';
 import 'package:bms/Screens/LeaveTracker.dart';
@@ -71,7 +73,7 @@ class LanderPageState extends State<LanderPage>
   String profileUrl = "";
   Stopwatch _stopwatch = Stopwatch();
   String _elapsedTime = '';
-  int roleId=0;
+  int roleId = 0;
   bool _isCheckingIn = true;
   bool isLoading = false;
   bool _isCheckingLocation = false;
@@ -199,7 +201,6 @@ class LanderPageState extends State<LanderPage>
 
       var data = jsonDecode(response.body.toString());
 
-      if (!mounted) return null;
       if (data['success']) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(
@@ -236,9 +237,9 @@ class LanderPageState extends State<LanderPage>
 
   void getPunched() async {
     final pref = await SharedPreferences.getInstance();
-await ApiCalls.getStatus(pref.getInt('account_id')??0);
+    await ApiCalls.getStatus(pref.getInt('account_id') ?? 0);
     setState(() {
-      roleId=pref.getInt("role_id")??0;
+      roleId = pref.getInt("role_id") ?? 0;
       profileUrl = pref.getString('profile_path') ?? "";
       if (pref.getInt('punch_Status') == 1) {
         backColor = Colors.greenAccent;
@@ -254,50 +255,16 @@ await ApiCalls.getStatus(pref.getInt('account_id')??0);
     });
   }
 
-  Timer? _timer;
-  void startPolling() {
-    _timer = Timer.periodic(Duration(seconds: 10), (timer) async {
-      await _fetchNotifications();
-    });
-  }
-
-  String count = "0";
-  Future<void> _fetchNotifications() async {
-    SharedPreferences pref = await SharedPreferences.getInstance();
-    try {
-      final response = await http.post(
-          Uri.parse(
-              "https://portalwiz.net/laravelapi/public/api/count_unread_notifications"),
-          body: {"to_user_id": "${pref.getInt('user_id').toString()}"});
-
-      if (response.statusCode == 200) {
-        var data = jsonDecode(response.body);
-        print(data["unread_count"]);
-        setState(() {
-          count = "${data["unread_count"]}";
-        });
-
-        print('New notifications: ${response.body}');
-      } else {
-        print('Failed to load notifications');
-      }
-    } catch (e) {
-      print('Error: $e');
-    }
-  }
-
   late TabController tabController;
   @override
   void initState() {
-    startPolling();
     fetchAttendanceData();
-    
+
     getPunched();
     ApiCalls.getDataofCards(1.toString());
-
     dataOfCards;
     _determinePosition();
-    tabController = TabController(length: 7, vsync: this, initialIndex: 0);
+    tabController = TabController(length: 6, vsync: this, initialIndex: 0);
     super.initState();
   }
 
@@ -388,34 +355,47 @@ await ApiCalls.getStatus(pref.getInt('account_id')??0);
     );
   }
 
+  Future<void> clearUserData() async {
+    final SharedPreferences sharedPref = await SharedPreferences.getInstance();
+
+    await sharedPref.remove("session_id");
+    await sharedPref.remove("user_id");
+    await sharedPref.remove("punch_Status");
+    await sharedPref.remove("account_id");
+    await sharedPref.remove("role_id");
+    await sharedPref.remove("user_email");
+    await sharedPref.remove("username");
+    await sharedPref.remove("user_full_name");
+    await sharedPref.remove("account_display_name");
+    await sharedPref.remove("profile_path");
+    await sharedPref.remove("product_display_name");
+    await sharedPref.remove("privacy Terms");
+    print("cleared");
+  }
+
   Future<Map<String, dynamic>?> fetchAttendanceData() async {
-    
     try {
       final pref = await SharedPreferences.getInstance();
-
       Uri urlfetchAttendance = Uri.parse(
           "https://portalwiz.net/laravelapi/public/api/fetch_attendance");
-
       var payloadForFetch = {
         "account_id": pref.getInt('account_id').toString(),
         "user_id": pref.getInt('user_id').toString(),
       };
-
       final responseAttendance =
           await http.post(urlfetchAttendance, body: payloadForFetch);
-
       if (responseAttendance.statusCode == 200) {
         var data = jsonDecode(responseAttendance.body);
 
-        if (pref.getString("chekinTime") == null && data['punch_status'] == 0) {
-        
-                 DateTime checkinTime = DateTime(
+        if (data['punch_status'] == 0) {
+          print(data["data"].last["time"].split(":")[0]);
+          DateTime checkinTime = DateTime(
             DateTime.now().year,
             DateTime.now().month,
             DateTime.now().day,
-            int.parse(data["data"].last["time"][0]),
-            int.parse(data["data"].last["time"][1]),
-            int.parse(data["data"].last["time"][2]),
+            int.parse(data["data"].last["time"].split(":")[0]),
+            int.parse(data["data"].last["time"].split(":")[1]),
+            int.parse(data["data"].last["time"].split(":")[2]),
           );
 
           DateTime currentDate = DateTime.now().subtract(Duration(
@@ -440,6 +420,7 @@ await ApiCalls.getStatus(pref.getInt('account_id')??0);
         throw Exception('Failed to fetch attendance data');
       }
     } catch (e) {
+      print(e);
       return null;
     }
   }
@@ -460,11 +441,7 @@ await ApiCalls.getStatus(pref.getInt('account_id')??0);
       final response = await http.post(url, body: payload);
       var data = jsonDecode(response.body.toString());
 
-      if (!mounted) return null;
-
       if (data['success']) {
-        pref.setString("chekinTime",
-            "${DateTime.now().hour}:${DateTime.now().minute}:${DateTime.now().second}");
         final punchStatus = pref.getInt('punch_Status');
         if (punchStatus == 0) {
           _stopWatchTimer.onResetTimer();
@@ -544,7 +521,7 @@ await ApiCalls.getStatus(pref.getInt('account_id')??0);
                           final createdAt = snapshot.data != null
                               ? snapshot.data!['created_at']
                               : null;
-
+                          print(snapshot.data);
                           DateTime? createdDateTime;
                           String formattedDate = '';
 
@@ -712,22 +689,23 @@ await ApiCalls.getStatus(pref.getInt('account_id')??0);
               },
             ),
 
-            Visibility(
-              visible: roleId==1,
-              child: ListTile(
-                title: const Text("Projects"),
-                leading: const Icon(Icons.add_box),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ProjectManagementScreen(),
-                    ),
-                  );
-                },
-              ),
+            // Visibility(
+            //   visible: roleId == 1,
+            //   child:
+            ListTile(
+              title: const Text("Projects"),
+              leading: const Icon(Icons.add_box),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ProjectManagementScreen(),
+                  ),
+                );
+              },
             ),
+
             ListTile(
               title: const Text("Attendence"),
               leading: const Icon(Icons.edit_document),
@@ -761,7 +739,8 @@ await ApiCalls.getStatus(pref.getInt('account_id')??0);
                 Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (context) => DailyTasks(title: "Daily PLans")));
+                        builder: (context) =>
+                            DailyTasks(title: "Daily PLans")));
               },
             ),
             // ListTile(
@@ -795,40 +774,61 @@ await ApiCalls.getStatus(pref.getInt('account_id')??0);
                     MaterialPageRoute(builder: (context) => MyEnquire()));
               },
             ),
-            Visibility(
-              visible: roleId==1,
-              child: ListTile(
-                title: const Text("Leave Tracker "),
-                leading: const Icon(Icons.work),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(context,
-                      MaterialPageRoute(builder: (context) => LeaveTracker()));
-                },
-              ),
-            ),
+
+            // Visibility(
+            //   visible: roleId == 1,
+            //   child:
             ListTile(
-              title: const Text("Leave Requests "),
+              title: const Text("Leave Tracker "),
               leading: const Icon(Icons.work),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(context,
-                    MaterialPageRoute(builder: (context) => LeaveRequest()));
+                    MaterialPageRoute(builder: (context) => LeaveTracker()));
               },
+            ),
+            Visibility(
+              visible: roleId == 1,
+              child: ListTile(
+                title: const Text("Leave Requests "),
+                leading: const Icon(Icons.work),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (context) => LeaveRequest()));
+                },
+              ),
             ),
             ListTile(
               title: const Text("Log Out"),
               leading: const Icon(Icons.logout_outlined),
               onTap: () async {
                 Navigator.pop(context);
-                SharedPreferences sharedPreferences =
-                    await SharedPreferences.getInstance();
-                await sharedPreferences.clear();
 
-                Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => MyHomePage(title: "")));
+                try {
+                  // Clear user data
+                  await clearUserData();
+
+                  // Clear all cache
+                  final directory = await getTemporaryDirectory();
+                  final cacheDir = Directory(directory.path);
+                  if (cacheDir.existsSync()) {
+                    cacheDir.deleteSync(recursive: true);
+                  }
+                } catch (e) {
+                  print(e);
+                }
+
+                // Dispose controllers and other resources if needed
+                // _yourController.dispose();
+
+                // Navigate to login screen and remove all previous routes
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => MyHomePage(title: "")),
+                  (Route<dynamic> route) => false,
+                );
               },
             ),
             ListTile(
@@ -857,39 +857,15 @@ await ApiCalls.getStatus(pref.getInt('account_id')??0);
                     "https://portalwiz.net/laravelapi/storage/app/" +
                         profileUrl),
               ),
-              IconButton(
-                icon: Stack(
-                  children: [
-                    Icon(Icons.notifications),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 12.5),
-                      child: CircleAvatar(
-                        radius: 6,
-                        child: Text(
-                          "${count}",
-                          style: TextStyle(color: Colors.white, fontSize: 8),
-                        ),
-                        backgroundColor: Colors.redAccent,
-                      ),
-                    ),
-                  ],
-                ),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => NotificationPage()),
-                  );
-                },
-              ),
             ],
           ),
           bottom: PreferredSize(
             preferredSize: Size.fromHeight(50.0),
             child: TabBar(
               tabs: const [
-                Tab(
-                  text: "Not Started",
-                ),
+                // Tab(
+                //   text: "Not Started",
+                // ),
                 Tab(
                   text: "Active",
                 ),
@@ -918,7 +894,7 @@ await ApiCalls.getStatus(pref.getInt('account_id')??0);
       body: TabBarView(
         controller: tabController,
         children: [
-          NotActive(),
+          //  NotActive(),
           Active(),
           Hold(),
           Review(),

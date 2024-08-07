@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:horizontal_data_table/horizontal_data_table.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:flutter_quill/flutter_quill.dart';
+
+import 'package:flutter_quill/quill_delta.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class EmployeeDialog extends StatefulWidget {
   final int projectId;
@@ -354,6 +358,189 @@ class _EmployeeDialogState extends State<EmployeeDialog> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class CommentDialog extends StatefulWidget {
+  final int projectId;
+
+  CommentDialog({required this.projectId});
+
+  @override
+  _CommentDialogState createState() => _CommentDialogState();
+}
+
+class _CommentDialogState extends State<CommentDialog> {
+  final TextEditingController _commentController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
+  List<Map<String, dynamic>> _comments = [];
+  List<Map<String, dynamic>> _filteredComments = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchComments();
+    _searchController.addListener(_filterComments);
+  }
+
+  void _filterComments() {
+    final query = _searchController.text.toLowerCase();
+    setState(() {
+      _filteredComments = _comments.where((comment) {
+        final message = comment['message'].toString().toLowerCase();
+        final createdBy =
+            (comment['created_fname'] + ' ' + comment['created_lname'])
+                .toLowerCase();
+        return message.contains(query) || createdBy.contains(query);
+      }).toList();
+    });
+  }
+
+  Future<void> _fetchComments() async {
+    final response = await http.post(
+      Uri.parse(
+          'https://pw-bms-dev.portalwiz.in/laravelapi/public/api/fetch_project_comment'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'account_id': '1100',
+        'project_id': widget.projectId,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> responseData = jsonDecode(response.body);
+      setState(() {
+        _comments = responseData
+            .map((data) => Map<String, dynamic>.from(data))
+            .toList();
+        _filteredComments = _comments;
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to fetch comments')),
+      );
+    }
+  }
+
+  Future<void> _addComment() async {
+    if (_commentController.text.isNotEmpty) {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      int? userId = prefs.getInt('user_id');
+
+      final comment = _commentController.text;
+      final response = await http.post(
+        Uri.parse(
+            'https://pw-bms-dev.portalwiz.in/laravelapi/public/api/add_project_comment_log'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'account_id': '1100',
+          'comment_status': '',
+          'created_by': userId,
+          'message': comment,
+          'project_id': widget.projectId,
+          'user_id': userId,
+        }),
+      );
+
+      final responseData = jsonDecode(response.body);
+      if (responseData['success']) {
+        _fetchComments();
+        _commentController.clear();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content:
+                  Text('Comment added and notifications sent successfully')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to add comment')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.9,
+        padding: EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Comments',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _commentController,
+                    decoration: InputDecoration(
+                      labelText: 'Add Comment',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: _addComment,
+                  child: Text('Add'),
+                ),
+              ],
+            ),
+            SizedBox(height: 10),
+            TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                labelText: 'Search Comments',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+            SizedBox(height: 10),
+            Divider(),
+            SizedBox(height: 10),
+            Expanded(
+              child: ListView.builder(
+                itemCount: _filteredComments.length,
+                itemBuilder: (context, index) {
+                  final comment = _filteredComments[index];
+                  final createdAt = DateTime.parse(comment['created_at']);
+                  final formattedDate =
+                      "${createdAt.month}/${createdAt.day}/${createdAt.year}, ${createdAt.hour}:${createdAt.minute}";
+
+                  return Card(
+                    margin: EdgeInsets.symmetric(vertical: 4),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                    elevation: 2,
+                    child: Padding(
+                      padding: EdgeInsets.all(10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "${comment['created_fname']} ${comment['created_lname']} Commented On $formattedDate",
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          SizedBox(height: 5),
+                          Text(comment['message']),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
