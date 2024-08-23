@@ -1301,7 +1301,7 @@ class _DailyTasksState extends State<DailyTasks> {
                                       ),
                                       Padding(
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 10.0),
+                                            horizontal: 0.0),
                                         child: Divider(
                                           color: const Color.fromARGB(
                                               255, 203, 203, 203),
@@ -1364,7 +1364,7 @@ class _DailyTasksState extends State<DailyTasks> {
                                       ),
                                       Padding(
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 10.0),
+                                            horizontal: 0.0),
                                         child: Divider(
                                           color: const Color.fromARGB(
                                               255, 203, 203, 203),
@@ -1544,7 +1544,7 @@ class _DailyTasksState extends State<DailyTasks> {
                                       ),
                                       Padding(
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 10.0),
+                                            horizontal: 0.0),
                                         child: Divider(
                                           color: const Color.fromARGB(
                                               255, 203, 203, 203),
@@ -1790,7 +1790,7 @@ class _DailyTasksState extends State<DailyTasks> {
                                       ),
                                       Padding(
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 10.0),
+                                            horizontal: 0.0),
                                         child: Divider(
                                           color: const Color.fromARGB(
                                               255, 203, 203, 203),
