@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:bms/ApiCalls/apiCalls.dart';
 import 'package:bms/Screens/DashBoardScreen.dart';
+import 'package:bms/Screens/DashBoardScreen.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/widgets.dart';
 import 'package:lottie/lottie.dart';
@@ -34,7 +35,9 @@ class SplashScreenState extends State<SplashScreen> {
     print(email);
     if (!email.isEmpty) {
 //  await ApiCalls.getDataofCards(1.toString());
-      await ApiCalls.getDataofCards(2.toString());
+      await ApiCalls.getDataofCards(
+          2.toString(), [], [], [], null, null, null, null);
+      //  await ApiCalls.fetchAndStoreEmployeeId(sharedpref.getInt("user_id")??0,"${sharedpref.getInt("account_id")??0}");
 
       Navigator.pushReplacement(
           context, MaterialPageRoute(builder: (context) => HomeScreen()));

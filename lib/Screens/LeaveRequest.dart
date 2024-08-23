@@ -16,7 +16,9 @@ class LeaveRequest extends StatefulWidget {
   _LeaveRequestState createState() => _LeaveRequestState();
 }
 
-class _LeaveRequestState extends State<LeaveRequest> {
+class _LeaveRequestState extends State<LeaveRequest>
+    with SingleTickerProviderStateMixin {
+  TabController? _tabController;
   List<dynamic> leaveRequests = [];
   List<dynamic> approvedLeaveRequests = [];
   List<dynamic> deniedLeaveRequests = [];
@@ -25,16 +27,30 @@ class _LeaveRequestState extends State<LeaveRequest> {
   List<dynamic> deniedWfhRequests = [];
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 6, vsync: this);
+    _tabController!.addListener(_handleTabSelection);
     _fetchAndStoreEmployeeId();
     fetchData();
     fetchWFHData();
-    _fetchApprovedLeaves();
-    _fetchDeniedLeaves();
-    //_fetchApprovedWfh();
   }
 
+  @override
+  void dispose() {
+    _tabController?.dispose();
+    super.dispose();
+  }
+
+  void _handleTabSelection() {
+    if (_tabController!.index == 3) {
+      // When the "Approved" tab is selected
+      _fetchApprovedLeaves();
+    } else if (_tabController!.index == 5) {
+      // When the "Denied" tab is selected
+      _fetchDeniedLeaves();
+    }
+  }
   // Future<void> _loadData() async {
   //   await fetchData();
   //   await fetchWFHData();
@@ -213,11 +229,9 @@ class _LeaveRequestState extends State<LeaveRequest> {
               ),
             ),
             Tooltip(
-              message: 'See Calender',
+              message: 'See Calendar',
               child: IconButton(
-                icon: Icon(
-                  Icons.calendar_today,
-                ),
+                icon: Icon(Icons.calendar_today),
                 onPressed: () {
                   _selectDate(context);
                 },
@@ -227,6 +241,7 @@ class _LeaveRequestState extends State<LeaveRequest> {
           bottom: PreferredSize(
             preferredSize: Size.fromHeight(30.0),
             child: TabBar(
+              controller: _tabController,
               isScrollable: true,
               tabs: [
                 Tab(text: 'Leaves'),
@@ -240,6 +255,7 @@ class _LeaveRequestState extends State<LeaveRequest> {
           ),
         ),
         body: TabBarView(
+          controller: _tabController,
           children: [
             _buildLeaveRequestList(leaveRequests),
             LeaveBalancePage(),

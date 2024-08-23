@@ -6,8 +6,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   connectivity_plus
   file_selector_windows
   geolocator_windows
-  irondash_engine_context
-  super_native_extensions
+  record_windows
   url_launcher_windows
 )
 

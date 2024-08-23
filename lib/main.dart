@@ -4,6 +4,7 @@ import 'package:bms/Screens/SplashScreen.dart';
 import 'package:bms/ApiCalls/apiCalls.dart';
 import 'package:bms/methods/internetconnectivity.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:bms/pojos/models/loginpojo.dart';
@@ -47,16 +48,18 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   List<Data> loginResponse = [];
+
   var username = TextEditingController();
   var password = TextEditingController();
 
   bool obcurseText = true;
 //  static String baseurl="https://pw-bms-dev.portalwiz.in/laravelapi/public/api/";
+  // static String baseurl =
+  //     "https://pw-bms-dev.portalwiz.in/laravelapi/public/api/";
   static String baseurl = "https://portalwiz.net/laravelapi/public/api/";
 
   @override
   void initState() {
-    _fetchAndStoreEmployeeId();
     // TODO: implement initState
     super.initState();
   }
@@ -203,22 +206,22 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  Future<void> _fetchAndStoreEmployeeId() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? employeeId = prefs.getString('employee_id');
+  // Future<void> _fetchAndStoreEmployeeId() async {
+  //   SharedPreferences prefs = await SharedPreferences.getInstance();
+  //   String? employeeId = prefs.getString('employee_id');
 
-    // Print for debugging
-    print("Stored employee ID: $employeeId");
+  //   // Print for debugging
+  //   print("Stored employee ID: $employeeId");
 
-    if (employeeId == null) {
-      await ApiCalls.fetchAndStoreEmployeeId('1100');
-      employeeId = prefs
-          .getString('employee_id'); // Fetch it again after attempting to store
-      print("Employee ID after fetching and storing: $employeeId");
-    } else {
-      print('Employee ID already found in SharedPreferences: $employeeId');
-    }
-  }
+  //   if (employeeId == null) {
+  //    // await ApiCalls.fetchAndStoreEmployeeId(prefs.getInt("user_id")??0,"${prefs.getInt("account_id")??0}");
+  //     employeeId = prefs
+  //         .getString('employee_id'); // Fetch it again after attempting to store
+  //     print("Employee ID after fetching and storing: $employeeId");
+  //   } else {
+  //     print('Employee ID already found in SharedPreferences: $employeeId');
+  //   }
+  // }
 
   Future<dynamic> checkLogin(
       String username, String password, BuildContext context) async {
@@ -253,6 +256,7 @@ class _MyHomePageState extends State<MyHomePage> {
       sharedPref.setString("username", loginResponse[0].profilePath.toString());
       sharedPref.setString(
           "user_full_name", loginResponse[0].firstName.toString());
+
       sharedPref.setString(
           "account_display_name", loginResponse[0].profilePath.toString());
       sharedPref.setString(

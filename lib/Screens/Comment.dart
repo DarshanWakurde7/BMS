@@ -1,4 +1,5 @@
 import 'package:bms/ApiCalls/apiCalls.dart';
+import 'package:bms/Screens/PopUpFroCopydailyPLan.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -80,6 +81,8 @@ class CommentPageState extends State<CommentPage> {
                       return ChatMessageWidget(
                         username: myComment[index].createdFname ?? "No Name",
                         message: myComment[index].message ?? "",
+                        projecid: myComment[index].projectId ?? 0,
+                        taskid: myComment[index].projectTaskId ?? 0,
                       );
                     },
                   ),
@@ -160,8 +163,11 @@ class ChatMessageWidget extends StatelessWidget {
     required this.username,
     required this.message,
     super.key,
+    required this.projecid,
+    required this.taskid,
   });
 
+  final int projecid, taskid;
   final String username;
   final String message;
 
@@ -234,6 +240,30 @@ class ChatMessageWidget extends StatelessWidget {
                         ))
                     .toList(),
               ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  IconButton(
+                      onPressed: () => showDialog(
+                            context: context,
+                            builder: (cocontext) {
+                              return Dialog(
+                                child: StatefulBuilder(
+                                  builder: (context, setState) {
+                                    return ProjectManagerPopup(
+                                      planid: null,
+                                      projectid: projecid,
+                                      taskid: taskid,
+                                      comment: message,
+                                    );
+                                  },
+                                ),
+                              );
+                            },
+                          ),
+                      icon: Icon(Icons.add_task_outlined))
+                ],
+              )
             ],
           ),
         ),

@@ -1,6 +1,8 @@
 import 'package:bms/ApiCalls/apiCalls.dart';
 import 'package:bms/Screens/Dialogs.dart';
+import 'package:bms/Screens/EditTask.dart';
 import 'package:bms/Screens/ViewTask.dart';
+import 'package:bms/Screens/addTaskPage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -260,7 +262,21 @@ class ProjectCard extends StatelessWidget {
               children: [
                 IconButton(
                   icon: Icon(Icons.add),
-                  onPressed: () {},
+                  onPressed: () async {
+                    SharedPreferences sharedPreferences =
+                        await SharedPreferences.getInstance();
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => EditTask(
+                                  title: "Search Project Name",
+                                  accid:
+                                      sharedPreferences.getInt("account_id") ??
+                                          0,
+                                  projecid: projectId,
+                                  projecttaskid: null,
+                                )));
+                  },
                 ),
                 IconButton(
                   icon: Icon(Icons.hourglass_empty),

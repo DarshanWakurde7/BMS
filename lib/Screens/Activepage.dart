@@ -20,7 +20,6 @@ class NotActiveState extends State<Active> {
     count = 4;
     getApiCallsActive();
     super.initState();
-    scroller.addListener(_scrollListener);
   }
 
   void _onSearchChanged(String val) {
@@ -44,8 +43,9 @@ class NotActiveState extends State<Active> {
   }
 
   void getApiCallsActive() async {
-    await ApiCalls.getDataofCards(1.toString());
-
+    print("okk");
+    await ApiCalls.getDataofCards(
+        2.toString(), [], [], [], null, null, null, null);
     setState(() {
       dataOfCards;
       filteredDataOfCards = dataOfCards;
@@ -54,7 +54,6 @@ class NotActiveState extends State<Active> {
 
   @override
   void dispose() {
-    scroller.removeListener(_scrollListener);
     searchController.dispose();
     super.dispose();
   }
@@ -62,83 +61,40 @@ class NotActiveState extends State<Active> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: MediaQuery.of(context).size.width,
-      height: MediaQuery.of(context).size.height - 190,
-      color: Colors.transparent,
-      child: RefreshIndicator(
-        triggerMode: RefreshIndicatorTriggerMode.anywhere,
-        onRefresh: () async {
-          await ApiCalls.getDataofCards(1.toString());
-          setState(() {
-            dataOfCards;
-            filteredDataOfCards = dataOfCards;
-          });
-        },
-        child: ListView.separated(
-          controller: scroller,
-          separatorBuilder: (context, index) => Divider(),
-          itemCount: filteredDataOfCards.length + 1,
-          itemBuilder: (context, index) {
-            if (index == 0) {
-              return Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: TextField(
-                  controller: searchController,
-                  onChanged: (val) {
-                    _onSearchChanged(val);
-                    print(val);
-                  },
-                  decoration: InputDecoration(
-                    contentPadding: EdgeInsets.zero,
-                    hintText: 'Search...',
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(22)),
-                    prefixIcon: Icon(Icons.search),
-                  ),
-                ),
-              );
-            } else {
-              final card = filteredDataOfCards[index - 1];
-              return myCards1(
-                projectid: dataOfCards[index].projectTaskId ?? 0,
-                Title: card.projectName ?? "Project Name Here",
-                taskTypeName: card.taskTypeName ?? "Normal",
-                description: card.taskName ?? "Task Name",
-                mydata: myStatus,
-                colab: card.collaborators ?? [],
-                priority: myprority,
-                plandate: card.planStartDate ?? "00-00-0000",
-                todate: card.planEndDate ?? "00-00-0000",
-                assigne: card.assingedName ?? "Donald Trumph",
-                index: index - 1,
-                isFocused: card.focus ?? false,
-                data: card,
-                refresh: () {
-                  getApiCallsActive();
-                },
-                star: dataOfCards[index].lkFeedbackId,
-                emoji: dataOfCards[index].smileyId,
-              );
-            }
+        width: MediaQuery.of(context).size.width,
+        height: MediaQuery.of(context).size.height - 190,
+        color: Colors.transparent,
+        child: RefreshIndicator(
+          onRefresh: () async {
+            getApiCallsActive();
           },
-        ),
-      ),
-    );
-  }
-
-  void _scrollListener() async {
-    if (scroller.position.pixels == scroller.position.maxScrollExtent) {
-      await ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Center(child: CircularProgressIndicator()),
-        backgroundColor: Colors.transparent,
-        duration: Duration(milliseconds: 500),
-      ));
-
-      setState(() {
-        if (count < dataOfCards.length) {
-          count = count + 1;
-        }
-      });
-    }
+          child: ListView.separated(
+              itemCount: dataOfCards.length,
+              separatorBuilder: (context, index) => Divider(),
+              itemBuilder: ((context, index) {
+                return myCards1(
+                    Title:
+                        dataOfCards[index].projectName ?? "Project Name Here",
+                    taskTypeName: dataOfCards[index].taskTypeName ?? "Normal",
+                    description: dataOfCards[index].taskName ?? "Task Name",
+                    mydata: myStatus,
+                    colab: dataOfCards[index].collaborators ?? [],
+                    priority: myprority,
+                    plandate: dataOfCards[index].planStartDate ?? "00-00-0000",
+                    todate: dataOfCards[index].planEndDate ?? "00-00-0000",
+                    assigne: dataOfCards[index].assingedName ?? "Donald Trumph",
+                    index: index,
+                    isFocused: dataOfCards[index].focus ?? false,
+                    data: dataOfCards[index],
+                    refresh: () {
+                      getApiCallsActive();
+                    },
+                    projectid: dataOfCards[index].projectTaskId ?? 0,
+                    star: dataOfCards[index].lkFeedbackId,
+                    emoji: dataOfCards[index].smileyId,
+                    statusString: dataOfCards[index].status ?? "",
+                    priorityString: dataOfCards[index].priorityName ?? "");
+              })),
+        ));
   }
 }

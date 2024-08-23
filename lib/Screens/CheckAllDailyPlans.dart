@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:date_picker_timeline/date_picker_widget.dart';
 import 'package:flutter/material.dart';
+import 'package:horizontal_data_table/horizontal_data_table.dart';
 import 'package:http/http.dart' as http;
 import 'package:multi_dropdown/multiselect_dropdown.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -21,6 +22,7 @@ class _CheckalldailyplansState extends State<Checkalldailyplans> {
   List<Map<String, dynamic>> _taskData = [];
   List<ValueItem> _selectedTeam = [];
   List<ValueItem<dynamic>> _selectedEmployee = [];
+  int count = 0;
   //  static String baseurl="https://pw-bms-dev.portalwiz.in/laravelapi/public/api/";
   static String baseurl = "https://portalwiz.net/laravelapi/public/api/";
   int roleId = 0;
@@ -118,6 +120,7 @@ class _CheckalldailyplansState extends State<Checkalldailyplans> {
 
   Future<void> listTodo() async {
     try {
+      _teamsList.clear();
       SharedPreferences sharedPreferences =
           await SharedPreferences.getInstance();
 
@@ -157,7 +160,7 @@ class _CheckalldailyplansState extends State<Checkalldailyplans> {
         body: jsonEncode(requestBody),
       );
 
-      print(response.body);
+      print(jsonDecode(response.body));
 
       if (response.statusCode == 200) {
         var data = jsonDecode(response.body.toString());
@@ -202,7 +205,7 @@ class _CheckalldailyplansState extends State<Checkalldailyplans> {
             ),
           ),
           Visibility(
-            visible: ((!(_teamsList.isEmpty))),
+            visible: true,
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               child: Row(
@@ -258,27 +261,119 @@ class _CheckalldailyplansState extends State<Checkalldailyplans> {
                         selectedOptions: _selectedEmployee ?? [],
                       ),
                     ),
-                  )
+                  ),
                 ],
               ),
             ),
           ),
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(0.0),
-              child: DataTable(
-                  columns: [
-                    DataColumn(label: Text('Name')),
-                    DataColumn(label: Text('Incomplet')),
-                    DataColumn(label: Text('Complete')),
-                  ],
-                  rows: _taskData.map((task) {
-                    return DataRow(cells: [
-                      DataCell(Text(task['user_name'])),
-                      DataCell(Text(task['incomplete_count'].toString())),
-                      DataCell(Text(task['complete_count'].toString())),
-                    ]);
-                  }).toList()),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.vertical,
+              child: Table(
+                defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                border: TableBorder.all(),
+                columnWidths: const {
+                  0: FlexColumnWidth(12),
+                  1: FlexColumnWidth(32),
+                  2: FlexColumnWidth(16),
+                  3: FlexColumnWidth(20),
+                  4: FlexColumnWidth(20),
+                },
+                children: [
+                  TableRow(
+                    decoration: BoxDecoration(color: Colors.grey[300]),
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(
+                          'Sr No.',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(
+                          'Emp Name',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text('Pending',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 12)),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text('Incomplete',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 12)),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text('Complete',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 12)),
+                      ),
+                    ],
+                  ),
+                  ..._taskData.asMap().entries.map((entry) {
+                    int index = entry.key + 1;
+                    Map<String, dynamic> task = entry.value;
+                    return TableRow(
+                      decoration: BoxDecoration(
+                          color: (_taskData.length == index)
+                              ? Colors.blueAccent.shade100
+                              : null),
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Text(
+                            "${index})",
+                            style: TextStyle(
+                                color: (task['manager_status'])
+                                    ? Colors.blueAccent
+                                    : Colors.black),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Text(
+                            "${task['user_name']}",
+                            style: TextStyle(
+                                color: (task['manager_status'])
+                                    ? Colors.blueAccent
+                                    : Colors.black),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Text(
+                            task['pending_count'].toString(),
+                            textAlign: TextAlign.right,
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Text(
+                            task['incomplete_count'].toString(),
+                            textAlign: TextAlign.right,
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Text(
+                            task['complete_count'].toString(),
+                            textAlign: TextAlign.right,
+                          ),
+                        ),
+                      ],
+                    );
+                  }).toList(),
+                ],
+              ),
             ),
           ),
         ],

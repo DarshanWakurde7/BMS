@@ -13,7 +13,7 @@ class LeaveTracker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 4,
+      length: 3,
       child: Scaffold(
         appBar: AppBar(
           title: Text('Leave Tracker', style: GoogleFonts.lato()),
@@ -46,12 +46,12 @@ class LeaveTracker extends StatelessWidget {
             ),
           ],
           bottom: TabBar(
-            isScrollable: true,
+            isScrollable: false,
             tabs: [
               Tab(text: 'Leave'),
               Tab(text: 'WFH'),
               Tab(text: 'Holidays'),
-              Tab(text: 'Attendance Report'),
+              // Tab(text: 'Attendance Report'),
             ],
           ),
         ),
@@ -60,7 +60,7 @@ class LeaveTracker extends StatelessWidget {
             LeaveSection(),
             WorkFromHomeForm(),
             HolidayCalendarSection(),
-            AttendanceScreen(),
+            // AttendanceScreen(),
           ],
         ),
       ),
@@ -78,6 +78,8 @@ class _LeaveSectionState extends State<LeaveSection> {
   late Future<Map<String, dynamic>> futureSickLeaves;
   late Future<Map<String, dynamic>> futureElectiveLeaves;
 
+  Future<List<LeaveHistory>>? futureLeaveHistory;
+  Future<List<WfhHistory>>? futureWfhHistory;
   @override
   void initState() {
     _fetchAndStoreEmployeeId();
@@ -85,23 +87,36 @@ class _LeaveSectionState extends State<LeaveSection> {
     futureCasualLeaves = ApiCalls.fetchCasualLeaves();
     futureSickLeaves = ApiCalls.fetchSickLeaves();
     futureElectiveLeaves = ApiCalls.fetchElectiveLeaves();
+    callFunction();
   }
 
-  Future<void> _fetchAndStoreEmployeeId() async {
+  void callFunction() async {
+    try {
+      String employeeId = await _fetchAndStoreEmployeeId();
+
+      setState(() {
+        futureLeaveHistory = ApiCalls.fetchSingleEmployeeLeave();
+        futureWfhHistory = ApiCalls.fetchSingleEmployeeWFH();
+      });
+    } catch (e) {
+      print("Error: $e");
+    }
+  }
+
+  Future<String> _fetchAndStoreEmployeeId() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? employeeId = prefs.getString('employee_id');
 
-    // Print for debugging
-    print("Stored employee ID: $employeeId");
-
     if (employeeId == null) {
       await ApiCalls.fetchAndStoreEmployeeId('1100');
-      employeeId = prefs
-          .getString('employee_id'); // Fetch it again after attempting to store
-      print("Employee ID after fetching and storing: $employeeId");
-    } else {
-      print('Employee ID already found in SharedPreferences: $employeeId');
+      employeeId = prefs.getString('employee_id');
     }
+
+    if (employeeId == null) {
+      throw Exception('Employee ID not found after fetching and storing.');
+    }
+
+    return employeeId;
   }
 
   @override
@@ -137,6 +152,7 @@ class _LeaveSectionState extends State<LeaveSection> {
                                     .toString()
                                     .split('.')[0]) ??
                             0,
+                        refresh: () => callFunction(),
                       ),
                       LeaveCard(
                         title: 'Sick Leaves',
@@ -150,6 +166,7 @@ class _LeaveSectionState extends State<LeaveSection> {
                                     .toString()
                                     .split('.')[0]) ??
                             0,
+                        refresh: () => callFunction(),
                       ),
                       LeaveCard(
                         title: 'Elective Leaves',
@@ -163,14 +180,18 @@ class _LeaveSectionState extends State<LeaveSection> {
                                     .toString()
                                     .split('.')[0]) ??
                             0,
+                        refresh: () => callFunction(),
                       ),
                     ],
                   ),
                 ),
                 SizedBox(height: 12.0),
-                LeaveHistorySection(),
-                SizedBox(height: 12.0),
-                WfhHistorySection(),
+                LeaveHistorySection(
+                  futureLeaveHistory: futureLeaveHistory ?? Future.value([]),
+                  futureWfhHistory: futureWfhHistory ?? Future.value([]),
+                ),
+                // SizedBox(height: 12.0),
+                // WfhHistorySection(),
               ],
             ),
           );
@@ -281,12 +302,14 @@ class LeaveCard extends StatelessWidget {
   final String title;
   final int balancedLeaves;
   final int bookedLeaves;
+  Function refresh;
 
-  const LeaveCard({
+  LeaveCard({
     Key? key,
     required this.title,
     required this.balancedLeaves,
     required this.bookedLeaves,
+    required this.refresh,
   }) : super(key: key);
 
   @override
@@ -382,7 +405,9 @@ class LeaveCard extends StatelessWidget {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                                builder: (context) => LeaveForm()),
+                                builder: (context) => LeaveForm(
+                                      refresh: () => refresh(),
+                                    )),
                           );
                         },
                         style: ButtonStyle(
@@ -409,31 +434,55 @@ class LeaveCard extends StatelessWidget {
 }
 
 class LeaveHistorySection extends StatefulWidget {
+  Future<List<LeaveHistory>> futureLeaveHistory;
+  Future<List<WfhHistory>> futureWfhHistory;
+  LeaveHistorySection(
+      {required this.futureLeaveHistory, required this.futureWfhHistory});
   @override
   _LeaveHistorySectionState createState() => _LeaveHistorySectionState();
 }
 
 class _LeaveHistorySectionState extends State<LeaveHistorySection> {
-  late Future<List<LeaveHistory>> futureLeaveHistory;
-
   @override
   void initState() {
     super.initState();
-    futureLeaveHistory = ApiCalls.fetchSingleEmployeeLeave();
+    callFunction();
+  }
+
+  void callFunction() async {
+    widget.futureLeaveHistory = ApiCalls.fetchSingleEmployeeLeave();
+    widget.futureWfhHistory = ApiCalls.fetchSingleEmployeeWFH();
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<LeaveHistory>>(
-      future: futureLeaveHistory,
+    return FutureBuilder<List<dynamic>>(
+      future: Future.wait([widget.futureLeaveHistory, widget.futureWfhHistory]),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(child: Container());
+          return Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
           return Center(child: Text("${snapshot.error}"));
         }
-        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+
+        List<LeaveHistory>? leaveHistory = snapshot.data![0];
+        List<WfhHistory>? wfhHistory = snapshot.data![1];
+
+        leaveHistory?.sort((a, b) {
+          DateTime dateA = DateTime.parse(a.dateFrom);
+          DateTime dateB = DateTime.parse(b.dateFrom);
+          return dateB.compareTo(dateA);
+        });
+
+        wfhHistory?.sort((a, b) {
+          DateTime dateA = DateTime.parse(a.dateFrom);
+          DateTime dateB = DateTime.parse(b.dateFrom);
+          return dateB.compareTo(dateA);
+        });
+
+        if ((leaveHistory == null || leaveHistory.isEmpty) &&
+            (wfhHistory == null || wfhHistory.isEmpty)) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -441,7 +490,7 @@ class _LeaveHistorySectionState extends State<LeaveHistorySection> {
                 Lottie.asset('asset/animation/notfound.json'),
                 SizedBox(height: 20),
                 Text(
-                  'No Leave History',
+                  'No Leave or WFH History',
                   style: GoogleFonts.lato(
                     fontSize: 18.0,
                     fontWeight: FontWeight.bold,
@@ -451,11 +500,16 @@ class _LeaveHistorySectionState extends State<LeaveHistorySection> {
             ),
           );
         }
-        List<LeaveHistory>? leaveHistory = snapshot.data;
+
         return Column(
-          children: leaveHistory!
-              .map((leave) => LeaveHistoryCard(leave: leave))
-              .toList(),
+          children: [
+            if (leaveHistory != null && leaveHistory.isNotEmpty)
+              ...leaveHistory
+                  .map((leave) => LeaveHistoryCard(leave: leave))
+                  .toList(),
+            if (wfhHistory != null && wfhHistory.isNotEmpty)
+              ...wfhHistory.map((wfh) => WfhHistoryCard(wfh: wfh)).toList(),
+          ],
         );
       },
     );
@@ -546,39 +600,57 @@ class LeaveHistoryCard extends StatelessWidget {
   }
 }
 
-class WfhHistorySection extends StatefulWidget {
-  @override
-  _WfhHistorySectionState createState() => _WfhHistorySectionState();
-}
+// class WfhHistorySection extends StatefulWidget {
+//   @override
+//   _WfhHistorySectionState createState() => _WfhHistorySectionState();
+// }
 
-class _WfhHistorySectionState extends State<WfhHistorySection> {
-  late Future<List<WfhHistory>> futureWfhHistory;
+// class _WfhHistorySectionState extends State<WfhHistorySection> {
+//   late Future<List<WfhHistory>> futureWfhHistory;
 
-  @override
-  void initState() {
-    super.initState();
-    futureWfhHistory = ApiCalls.fetchSingleEmployeeWFH();
-  }
+//   @override
+//   void initState() {
+//     super.initState();
+//     _fetchAndStoreEmployeeId();
+//     futureWfhHistory = ApiCalls.fetchSingleEmployeeWFH();
+//   }
 
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<List<WfhHistory>>(
-      future: futureWfhHistory,
-      builder: (context, snapshot) {
-        if (snapshot.hasData) {
-          List<WfhHistory>? wfhHistory = snapshot.data;
-          return Column(
-            children:
-                wfhHistory!.map((wfh) => WfhHistoryCard(wfh: wfh)).toList(),
-          );
-        } else if (snapshot.hasError) {
-          return Text("${snapshot.error}");
-        }
-        return CircularProgressIndicator();
-      },
-    );
-  }
-}
+//   Future<void> _fetchAndStoreEmployeeId() async {
+//     SharedPreferences prefs = await SharedPreferences.getInstance();
+//     String? employeeId = prefs.getString('employee_id');
+
+//     // Print for debugging
+//     print("Stored employee ID: $employeeId");
+
+//     if (employeeId == null) {
+//       await ApiCalls.fetchAndStoreEmployeeId('1100');
+//       employeeId = prefs
+//           .getString('employee_id'); // Fetch it again after attempting to store
+//       print("Employee ID after fetching and storing: $employeeId");
+//     } else {
+//       print('Employee ID already found in SharedPreferences: $employeeId');
+//     }
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return FutureBuilder<List<WfhHistory>>(
+//       future: futureWfhHistory,
+//       builder: (context, snapshot) {
+//         if (snapshot.hasData) {
+//           List<WfhHistory>? wfhHistory = snapshot.data;
+//           return Column(
+//             children:
+//                 wfhHistory!.map((wfh) => WfhHistoryCard(wfh: wfh)).toList(),
+//           );
+//         } else if (snapshot.hasError) {
+//           return Text("${snapshot.error}");
+//         }
+//         return CircularProgressIndicator();
+//       },
+//     );
+//   }
+// }
 
 class WfhHistory {
   final int wfhId;

@@ -1,3 +1,4 @@
+import 'package:animated_toggle_switch/animated_toggle_switch.dart';
 import 'package:bms/ApiCalls/apiCalls.dart';
 import 'package:bms/Screens/DailyTasks.dart';
 import 'package:flutter/material.dart';
@@ -6,8 +7,6 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
-
-
 
 class AddPlanUser extends StatefulWidget {
   @override
@@ -18,44 +17,46 @@ class _AddPlanUserState extends State<AddPlanUser> {
   DateTime _selectedDate = DateTime.now();
   String? _selectedEmployee;
   TextEditingController _entryController = TextEditingController();
-  bool _isPlanCompleted = false;
+  int _isPlanCompleted = 2;
   List<Map<String, dynamic>> _employeeList = [];
   List<dynamic> _teamsList = [];
-    int? _selectedTeam;
-      // static String baseurl="https://pw-bms-dev.portalwiz.in/laravelapi/public/api";
+  int? _selectedTeam;
+  // static String baseurl="https://pw-bms-dev.portalwiz.in/laravelapi/public/api";
   static String baseurl = "https://portalwiz.net/laravelapi/public/api";
   @override
   void initState() {
     super.initState();
-   fetchTeams();
+    fetchTeams();
   }
 
-
-
   Future<void> addDailyPlan() async {
-
-    SharedPreferences sharedPreferences=await SharedPreferences.getInstance();
-
-
+    SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
 
     final requestBody = {
       "plan_date": "${_selectedDate.toIso8601String().split('T')[0]}",
-      "user_id":"${sharedPreferences.getInt("user_id")}",
+      "user_id": "${sharedPreferences.getInt("user_id")}",
       "user_name": "${sharedPreferences.getString("user_full_name")}",
       "plan_name": _entryController.text,
       "achievements": "",
       "comments": "",
-      "team_id":"$_selectedTeam"
-      
+      "team_id": "$_selectedTeam",
+      "status": "$_isPlanCompleted",
+      "lk_feedback_id": "0",
     };
-      print(requestBody);
+    print(requestBody);
     try {
       bool success = await ApiCalls.addDailyPlan(requestBody);
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Data inserted successfully.')),
         );
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>DailyTasks(title: "tasks",)));
+        Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+                builder: (context) => DailyTasks(
+                      title: "tasks",
+                      today: true,
+                    )));
         _entryController.clear();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -68,13 +69,7 @@ class _AddPlanUserState extends State<AddPlanUser> {
         SnackBar(content: Text('Failed to insert data: $e')),
       );
     }
-    
   }
-
-
-
-
-
 
   Future<void> fetchTeams() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -143,14 +138,122 @@ class _AddPlanUserState extends State<AddPlanUser> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        Checkbox(
-                          value: _isPlanCompleted,
-                          onChanged: (bool? value) {
+                        // Checkbox(
+                        //   value: _isPlanCompleted,
+                        //   onChanged: (bool? value) {
+                        //     setState(() {
+                        //       _isPlanCompleted = value ?? false;
+                        //     });
+                        //   },
+                        // ),
+                        CustomAnimatedToggleSwitch<int>(
+                          key: Key("toggle_switch"),
+                          current: _isPlanCompleted,
+                          values: [2, 0, 1],
+                          iconBuilder: (context, local, global) {
+                            switch (local.value) {
+                              case 0:
+                                return Icon(Icons.clear,
+                                    color: Colors.red); // Not Done
+                              case 2:
+                                return Icon(Icons.access_time,
+                                    color: Colors.orange); // Pending
+                              case 1:
+                                return Icon(Icons.check,
+                                    color: Colors.green); // Done
+                              default:
+                                return Icon(Icons.error);
+                            }
+                          },
+                          onChanged: (value) async {
+                            setState(() {});
+                            // Add additional logic if needed when the value changes
+                          },
+                          animationDuration: const Duration(milliseconds: 500),
+                          animationCurve: Curves.easeInOutCirc,
+                          indicatorSize: const Size(48.0, double.infinity),
+                          spacing: 10.0, // Space between icons
+                          separatorBuilder:
+                              (context, separatorProps, globalProps) {
+                            return Container(
+                              width: 1.0,
+                              color: Colors.grey[300],
+                            );
+                          },
+                          onTap: (tapProps) async {
+                            // Handle tap events if needed
                             setState(() {
-                              _isPlanCompleted = value ?? false;
+                              _isPlanCompleted = tapProps.tapped!.value;
                             });
                           },
-                        ),
+                          fittingMode: FittingMode.preventHorizontalOverlapping,
+                          wrapperBuilder: (context, globalProps, child) {
+                            return Container(
+                              padding: EdgeInsets.symmetric(
+                                  vertical: 10, horizontal: 15),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(20),
+                                color: Colors.grey[200],
+                              ),
+                              child: child,
+                            );
+                          },
+                          foregroundIndicatorBuilder: (context, globalProps) {
+                            return Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(20),
+                                color: (_isPlanCompleted == 0)
+                                    ? Colors.redAccent
+                                    : (_isPlanCompleted == 1)
+                                        ? Colors.greenAccent
+                                        : Colors.white,
+                              ),
+                              child: Center(
+                                  child: Icon((_isPlanCompleted == 0)
+                                      ? Icons.cancel_outlined
+                                      : (_isPlanCompleted == 1)
+                                          ? Icons.check
+                                          : Icons.pending_outlined)),
+                            );
+                          },
+                          backgroundIndicatorBuilder: (context, globalProps) {
+                            return Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(20),
+                                color: Colors.blueAccent,
+                              ),
+                            );
+                          },
+                          indicatorAppearingBuilder:
+                              (context, animationValue, child) {
+                            return Opacity(
+                              opacity: animationValue,
+                              child: child,
+                            );
+                          },
+                          height: 50.0,
+                          iconArrangement: IconArrangement.row,
+                          iconsTappable: true,
+                          padding: EdgeInsets.zero,
+                          minTouchTargetSize: 48.0,
+                          dragStartDuration: const Duration(milliseconds: 200),
+                          dragStartCurve: Curves.easeInOutCirc,
+                          textDirection: TextDirection.ltr,
+                          cursors: ToggleCursors(),
+                          loading:
+                              false, // Add a loading indicator if necessary
+                          loadingAnimationDuration:
+                              const Duration(milliseconds: 300),
+                          loadingAnimationCurve: Curves.easeInOut,
+                          indicatorAppearingDuration:
+                              const Duration(milliseconds: 500),
+                          indicatorAppearingCurve: Curves.easeInOut,
+                          allowUnlistedValues: false,
+                          active: true,
+                          positionListener: (positionInfo) {
+                            // Optional: Listen to position changes of the indicator
+                          },
+                        )
                       ],
                     ),
                     SizedBox(height: 16.0),
@@ -200,11 +303,12 @@ class _AddPlanUserState extends State<AddPlanUser> {
                     ),
                     SizedBox(height: 16.0),
 
-                      DropdownButtonFormField<int>(
+                    DropdownButtonFormField<int>(
                       decoration: InputDecoration(
                         labelText: 'Select Team',
                         labelStyle: TextStyle(fontSize: 14),
-                        contentPadding: EdgeInsets.symmetric(vertical: 0.0, horizontal: 8.0),
+                        contentPadding: EdgeInsets.symmetric(
+                            vertical: 0.0, horizontal: 8.0),
                         isDense: true,
                       ),
                       value: _selectedTeam,
@@ -277,7 +381,7 @@ class _AddPlanUserState extends State<AddPlanUser> {
                     ),
                     SizedBox(height: 8.0),
                     ElevatedButton(
-                      onPressed: (){
+                      onPressed: () {
                         addDailyPlan();
                       },
                       child: Text('Add Plan'),

@@ -1,12 +1,17 @@
+import 'package:animated_toggle_switch/animated_toggle_switch.dart';
 import 'package:bms/ApiCalls/apiCalls.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ProjectManagerPopup extends StatefulWidget {
-  const ProjectManagerPopup({required this.planid});
+  const ProjectManagerPopup(
+      {required this.planid, this.projectid, this.taskid, this.comment});
   final int? planid;
+  final int? projectid, taskid;
+  final String? comment;
 
   @override
   _ProjectManagerPopupState createState() => _ProjectManagerPopupState();
@@ -16,7 +21,7 @@ class _ProjectManagerPopupState extends State<ProjectManagerPopup> {
   DateTime _selectedDate = DateTime.now();
   String? _selectedEmployee;
   TextEditingController _entryController = TextEditingController();
-  bool _isPlanCompleted = false;
+  int _isPlanCompleted = 2;
   List<dynamic> _employeeList = [];
   List<dynamic> _teamsList = [];
   int? _selectedTeam;
@@ -25,6 +30,7 @@ class _ProjectManagerPopupState extends State<ProjectManagerPopup> {
   @override
   void initState() {
     super.initState();
+
     fetchTeams();
     fetchPlan();
     // fetchEmployees();
@@ -43,6 +49,10 @@ class _ProjectManagerPopupState extends State<ProjectManagerPopup> {
   //   }
   // }
   Future<void> fetchPlan() async {
+    setState(() {
+      _entryController.text = widget.comment ?? "";
+    });
+
     if (widget.planid != null) {
       try {
         final response = await http.post(
@@ -64,7 +74,7 @@ class _ProjectManagerPopupState extends State<ProjectManagerPopup> {
                   ? DateTime.parse(data['plan_date']).add(Duration(days: 1))
                   : DateTime.now();
               _entryController.text = data['plan_name'] ?? "";
-              _isPlanCompleted = data['status'] == 1;
+              _isPlanCompleted = data['status'];
               _selectedTeam = data['team_id'];
 
               if (data['user_id'] != null && functionData) {
@@ -186,9 +196,16 @@ class _ProjectManagerPopupState extends State<ProjectManagerPopup> {
       "plan_name": _entryController.text,
       "plan_date": _selectedDate.toIso8601String().split('T')[0],
       "updated_by": selectedEmployee['user_id'].toString(),
-      "status": _isPlanCompleted ? "1" : "0",
+      "status": "${_isPlanCompleted}",
       "team_id": "$_selectedTeam",
+      "project_id": (widget.projectid.isNull) ? null : "${widget.projectid}",
+      "project_task_id": (widget.taskid.isNull) ? null : "${widget.taskid}",
+      "achievements": null,
+      "comments": null,
+      "lk_feedback_id": null
     };
+
+    print(jsonEncode(requestBody));
 
     try {
       bool success;
@@ -240,23 +257,128 @@ class _ProjectManagerPopupState extends State<ProjectManagerPopup> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Copy Plans',
+                        widget.projectid == null ? 'Copy Plans' : 'Add plan',
                         style: TextStyle(
                           fontSize: 18.0,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      Checkbox(
-                        value: _isPlanCompleted,
-                        onChanged: (bool? value) {
-                          setState(() {
-                            _isPlanCompleted = value ?? false;
-                          });
-                        },
-                      ),
+                      // Checkbox(
+                      //   value: _isPlanCompleted,
+                      //   onChanged: (bool? value) {
+                      //     setState(() {
+                      //       _isPlanCompleted = value ?? fals;
+                      //     });
+                      //   },
+                      // ),
                     ],
                   ),
                   SizedBox(height: 16.0),
+
+                  CustomAnimatedToggleSwitch<int>(
+                    key: Key("toggle_switch"),
+                    current: _isPlanCompleted,
+                    values: [2, 0, 1],
+                    iconBuilder: (context, local, global) {
+                      switch (local.value) {
+                        case 0:
+                          return Icon(Icons.clear,
+                              color: Colors.red); // Not Done
+                        case 2:
+                          return Icon(Icons.access_time,
+                              color: Colors.orange); // Pending
+                        case 1:
+                          return Icon(Icons.check, color: Colors.green); // Done
+                        default:
+                          return Icon(Icons.error);
+                      }
+                    },
+                    onChanged: (value) async {
+                      setState(() {});
+                      // Add additional logic if needed when the value changes
+                    },
+                    animationDuration: const Duration(milliseconds: 500),
+                    animationCurve: Curves.easeInOutCirc,
+                    indicatorSize: const Size(48.0, double.infinity),
+                    spacing: 5.0, // Space between icons
+                    separatorBuilder: (context, separatorProps, globalProps) {
+                      return Container(
+                        width: 1.0,
+                        color: Colors.grey[300],
+                      );
+                    },
+                    onTap: (tapProps) async {
+                      // Handle tap events if needed
+                      setState(() {
+                        _isPlanCompleted = tapProps.tapped!.value;
+                      });
+                    },
+                    fittingMode: FittingMode.preventHorizontalOverlapping,
+                    wrapperBuilder: (context, globalProps, child) {
+                      return Container(
+                        padding:
+                            EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          color: Colors.grey[200],
+                        ),
+                        child: child,
+                      );
+                    },
+                    foregroundIndicatorBuilder: (context, globalProps) {
+                      return Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          color: (_isPlanCompleted == 0)
+                              ? Colors.redAccent
+                              : (_isPlanCompleted == 1)
+                                  ? Colors.greenAccent
+                                  : Colors.white,
+                        ),
+                        child: Center(
+                            child: Icon((_isPlanCompleted == 0)
+                                ? Icons.cancel_outlined
+                                : (_isPlanCompleted == 1)
+                                    ? Icons.check
+                                    : Icons.pending_outlined)),
+                      );
+                    },
+                    backgroundIndicatorBuilder: (context, globalProps) {
+                      return Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          color: Colors.blueAccent,
+                        ),
+                      );
+                    },
+                    indicatorAppearingBuilder:
+                        (context, animationValue, child) {
+                      return Opacity(
+                        opacity: animationValue,
+                        child: child,
+                      );
+                    },
+                    height: 40.0,
+                    iconArrangement: IconArrangement.row,
+                    iconsTappable: true,
+                    padding: EdgeInsets.zero,
+                    minTouchTargetSize: 48.0,
+                    dragStartDuration: const Duration(milliseconds: 200),
+                    dragStartCurve: Curves.easeInOutCirc,
+                    textDirection: TextDirection.ltr,
+                    cursors: ToggleCursors(),
+                    loading: false, // Add a loading indicator if necessary
+                    loadingAnimationDuration: const Duration(milliseconds: 300),
+                    loadingAnimationCurve: Curves.easeInOut,
+                    indicatorAppearingDuration:
+                        const Duration(milliseconds: 500),
+                    indicatorAppearingCurve: Curves.easeInOut,
+                    allowUnlistedValues: false,
+                    active: true,
+                    positionListener: (positionInfo) {
+                      // Optional: Listen to position changes of the indicator
+                    },
+                  ),
                   // Date Picker Row
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,

@@ -12,6 +12,9 @@ class ViewTaskPage extends StatefulWidget {
 }
 
 class _ViewTaskPageState extends State<ViewTaskPage> {
+  static String baseurl =
+      "https://pw-bms-dev.portalwiz.in/laravelapi/public/api/";
+  // static String baseurl = "https://portalwiz.net/laravelapi/public/api/";
   String _statusGroupId = '1';
   List<dynamic> _tasks = [];
 
@@ -22,8 +25,7 @@ class _ViewTaskPageState extends State<ViewTaskPage> {
   }
 
   Future<void> _fetchTasks() async {
-    final url =
-        'https://pw-bms-dev.portalwiz.in/laravelapi/public/api/fetch_tasks_by_project';
+    final url = '${baseurl}fetch_tasks_by_project';
     final response = await http.post(
       Uri.parse(url),
       headers: {'Content-Type': 'application/json'},

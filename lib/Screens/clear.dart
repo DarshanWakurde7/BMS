@@ -14,7 +14,7 @@ class Clear extends StatefulWidget {
 class ClearState extends State<Clear> {
   @override
   void initState() {
-    ApiCalls.getDataofCards(7.toString());
+    ApiCalls.getDataofCards(7.toString(), [], [], [], null, null, null, null);
     dataofCardClear;
     super.initState();
   }
@@ -37,26 +37,30 @@ class ClearState extends State<Clear> {
               }
 
               return myCards1(
-                projectid: dataOfCards[index].projectTaskId ?? 0,
-                Title:
-                    dataofCardClear[index].projectName ?? "Project Name Here",
-                taskTypeName: dataofCardClear[index].taskTypeName ?? "Noraml",
-                description: dataofCardClear[index].taskName ?? "Task Name",
-                mydata: myStatus,
-                colab: dataofCardClear[index].collaborators ?? [],
-                priority: myprority,
-                plandate: dataofCardClear[index].planStartDate ?? "00-00-0000",
-                todate: dataofCardClear[index].planEndDate ?? "00-00-0000",
-                assigne: dataofCardClear[index].assingedName ?? "Donald Trumph",
-                index: index,
-                isFocused: dataOfCards[index].focus ?? false,
-                data: dataOfCards[index],
-                refresh: () {
-                  ApiCalls.getDataofCards(7.toString());
-                },
-                star: dataOfCards[index].lkFeedbackId ?? 3,
-                emoji: dataOfCards[index].smileyId ?? 1,
-              );
+                  projectid: dataOfCards[index].projectTaskId ?? 0,
+                  Title:
+                      dataofCardClear[index].projectName ?? "Project Name Here",
+                  taskTypeName: dataofCardClear[index].taskTypeName ?? "Noraml",
+                  description: dataofCardClear[index].taskName ?? "Task Name",
+                  mydata: myStatus,
+                  colab: dataofCardClear[index].collaborators ?? [],
+                  priority: myprority,
+                  plandate:
+                      dataofCardClear[index].planStartDate ?? "00-00-0000",
+                  todate: dataofCardClear[index].planEndDate ?? "00-00-0000",
+                  assigne:
+                      dataofCardClear[index].assingedName ?? "Donald Trumph",
+                  index: index,
+                  isFocused: dataOfCards[index].focus ?? false,
+                  data: dataOfCards[index],
+                  refresh: () {
+                    ApiCalls.getDataofCards(
+                        7.toString(), [], [], [], null, null, null, null);
+                  },
+                  star: dataOfCards[index].lkFeedbackId,
+                  emoji: dataOfCards[index].smileyId,
+                  statusString: dataOfCards[index].status ?? "",
+                  priorityString: dataOfCards[index].priorityName ?? "");
             })));
   }
 }

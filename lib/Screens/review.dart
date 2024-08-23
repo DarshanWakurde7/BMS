@@ -20,7 +20,8 @@ class ReviewState extends State<Review> {
   }
 
   void getApiCallsActive() async {
-    await ApiCalls.getDataofCards(4.toString());
+    await ApiCalls.getDataofCards(
+        4.toString(), [], [], [], null, null, null, null);
 
     setState(() {
       dataOfCards;
@@ -38,25 +39,26 @@ class ReviewState extends State<Review> {
             itemCount: dataOfCards.length,
             itemBuilder: ((context, index) {
               return myCards1(
-                projectid: dataOfCards[index].projectTaskId ?? 0,
-                Title: dataOfCards[index].projectName ?? "Project Name Here",
-                taskTypeName: dataOfCards[index].taskTypeName ?? "Normal",
-                description: dataOfCards[index].taskName ?? "Task Name",
-                mydata: myStatus,
-                colab: dataOfCards[index].collaborators ?? [],
-                priority: myprority,
-                plandate: dataOfCards[index].planStartDate ?? "00-00-0000",
-                todate: dataOfCards[index].planEndDate ?? "00-00-0000",
-                assigne: dataOfCards[index].assingedName ?? "Donald Trumph",
-                index: index,
-                isFocused: dataOfCards[index].focus ?? false,
-                data: dataOfCards[index],
-                refresh: () {
-                  getApiCallsActive();
-                },
-                star: dataOfCards[index].lkFeedbackId ?? 3,
-                emoji: dataOfCards[index].smileyId ?? 1,
-              );
+                  projectid: dataOfCards[index].projectTaskId ?? 0,
+                  Title: dataOfCards[index].projectName ?? "Project Name Here",
+                  taskTypeName: dataOfCards[index].taskTypeName ?? "Normal",
+                  description: dataOfCards[index].taskName ?? "Task Name",
+                  mydata: myStatus,
+                  colab: dataOfCards[index].collaborators ?? [],
+                  priority: myprority,
+                  plandate: dataOfCards[index].planStartDate ?? "00-00-0000",
+                  todate: dataOfCards[index].planEndDate ?? "00-00-0000",
+                  assigne: dataOfCards[index].assingedName ?? "Donald Trumph",
+                  index: index,
+                  isFocused: dataOfCards[index].focus ?? false,
+                  data: dataOfCards[index],
+                  refresh: () {
+                    getApiCallsActive();
+                  },
+                  star: dataOfCards[index].lkFeedbackId,
+                  emoji: dataOfCards[index].smileyId,
+                  statusString: dataOfCards[index].status ?? "",
+                  priorityString: dataOfCards[index].priorityName ?? "");
             })));
   }
 }

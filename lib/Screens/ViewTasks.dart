@@ -15,8 +15,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:bms/widgets/searchable_dropdown.dart';
 
-class AddTask extends StatefulWidget {
-  AddTask(
+class ViewTask extends StatefulWidget {
+  ViewTask(
       {super.key,
       required this.title,
       required this.accid,
@@ -30,7 +30,7 @@ class AddTask extends StatefulWidget {
   }
 }
 
-class AddTaskState extends State<AddTask> {
+class AddTaskState extends State<ViewTask> {
   bool _isLoading = false;
   DateTime esStart = DateTime(0000, 1, 1);
   DateTime esEnd = DateTime(0000, 1, 1);
@@ -148,7 +148,7 @@ class AddTaskState extends State<AddTask> {
     return Scaffold(
         appBar: AppBar(
           title: const Text(
-            "Add Task",
+            "View Task",
             style: TextStyle(color: Colors.black, fontWeight: FontWeight.w300),
           ),
           backgroundColor: Colors.white,
@@ -162,18 +162,16 @@ class AddTaskState extends State<AddTask> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     TextField(
-                      controller: textTtile,
-                      decoration: InputDecoration(
-                        labelText: widget.title,
-                        hintText: widget.title,
-                        hintStyle: TextStyle(fontSize: 18),
-                        border: OutlineInputBorder(),
-                        contentPadding: EdgeInsets.symmetric(
-                            vertical: 10.0, horizontal: 12.0),
-                      ),
-                      enabled: false,
-                      style: TextStyle(fontSize: 18),
-                    ),
+                        controller: textTtile,
+                        decoration: InputDecoration(
+                          hintText: widget.title,
+                          hintStyle: TextStyle(fontSize: 18),
+                          border: OutlineInputBorder(),
+                          contentPadding: EdgeInsets.symmetric(
+                              vertical: 10.0, horizontal: 12.0),
+                        ),
+                        enabled: false,
+                        style: TextStyle(fontSize: 18)),
                     SizedBox(height: 16),
                     Stack(
                       children: [

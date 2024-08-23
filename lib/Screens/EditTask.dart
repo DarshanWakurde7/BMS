@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:bms/ApiCalls/apiCalls.dart';
+import 'package:bms/pojos/models/CollaboratorsDropdown.dart';
 
 import 'package:bms/widgets/searchable_dropdown.dart';
 
@@ -13,16 +14,16 @@ import 'package:multi_dropdown/multiselect_dropdown.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:bms/widgets/searchable_dropdown.dart';
-
-class AddTask extends StatefulWidget {
-  AddTask(
+class EditTask extends StatefulWidget {
+  EditTask(
       {super.key,
       required this.title,
       required this.accid,
+      required this.projecttaskid,
       required this.projecid});
   String title;
   int accid, projecid;
+  int? projecttaskid;
 
   @override
   State<StatefulWidget> createState() {
@@ -30,7 +31,7 @@ class AddTask extends StatefulWidget {
   }
 }
 
-class AddTaskState extends State<AddTask> {
+class AddTaskState extends State<EditTask> {
   bool _isLoading = false;
   DateTime esStart = DateTime(0000, 1, 1);
   DateTime esEnd = DateTime(0000, 1, 1);
@@ -67,27 +68,107 @@ class AddTaskState extends State<AddTask> {
   String? selectedProject;
   bool showDropdown = false;
   List<Map<String, dynamic>> filteredItems = [];
-  final FocusNode taskAreaNode = FocusNode();
+
+  FocusNode _unUsedFocusNode = FocusNode();
 
   @override
   void initState() {
     getApis();
     proid.add(widget.projecid);
-    setState(() {
-      textTtile.text = widget.title;
-    });
+
     checkEdit = false;
     getbill = false;
     super.initState();
     fetchProjectList();
     fetchProjectList();
+    getDataofProjectTask();
   }
 
-  @override
-  void dispose() {
-    taskArea.dispose();
-    taskAreaNode.dispose();
-    super.dispose();
+  void getDataofProjectTask() async {
+    if (widget.projecttaskid != null) {
+      print(widget.projecid);
+      Map<String, dynamic> data =
+          await ApiCalls.fetchSingletask(widget.projecttaskid!);
+      print("Data $data");
+      setState(() {
+        data;
+        planStart = (data["plan_start_date"] != null)
+            ? DateTime.parse("${data["plan_start_date"]}")
+            : DateTime(0000, 1, 1);
+        esStart = (data["est_start_date"] != null)
+            ? DateTime.parse("${data["est_start_date"]}")
+            : DateTime(0000, 1, 1);
+        esEnd = (data["est_end_date"] != null)
+            ? DateTime.parse("${data["est_end_date"]}")
+            : DateTime(0000, 1, 1);
+        planEnd = (data["plan_end_date"] != null)
+            ? DateTime.parse("${data["plan_end_date"]}")
+            : DateTime(0000, 1, 1);
+        actStart = (data["act_start_date"] != null)
+            ? DateTime.parse("${data["act_start_date"]}")
+            : DateTime(0000, 1, 1);
+        actEnd = (data["act_end_date"] != null)
+            ? DateTime.parse("${data["act_end_date"]}")
+            : DateTime(0000, 1, 1);
+        textTtile.text = (widget.title != null) ? widget.title : "";
+        taskArea.text = (data["task_name"] != null) ? data["task_name"] : "";
+        categoryid = data["task_category"] ?? 0;
+
+        category = myCategories
+                .firstWhere(
+                  (category) =>
+                      (data["task_category"] ?? 0) ==
+                      (category.taskCategoryId ?? 0),
+                )
+                .taskCategory ??
+            "Task Category";
+        priorityid = data["priority_id"] ?? 0;
+
+        priority = (data["priority_id"] != null)
+            ? myprority
+                    .firstWhere(
+                      (category) =>
+                          (data["priority_id"] ?? 0) ==
+                          (category.priorityId ?? 0),
+                    )
+                    .priority ??
+                "Priority"
+            : "Prority";
+
+        statusid = data["task_status"] ?? 0;
+        Status = (data["task_status"] != null)
+            ? myStatus
+                    .firstWhere(
+                      (category) =>
+                          (data["task_status"] ?? 0) ==
+                          (category.taskStatusId ?? 0),
+                    )
+                    .taskStatus ??
+                "Status"
+            : "Status";
+
+        taskTypeid = data["task_status"] ?? 0;
+
+        task = (data["task_type"] != null)
+            ? getTasks
+                    .firstWhere(
+                      (category) =>
+                          (data["task_type"] ?? 0) ==
+                          (category.taskTypeId ?? 0),
+                    )
+                    .taskType ??
+                "Status"
+            : "Status";
+        assingnid = data["assinged_to"] ?? 0;
+        //  CollaboratorsDropdown? Assignfulldata   = collboraotrs.firstWhere(
+        //                                       (category) =>
+        //                                           data["assinged_to"]??0 ==
+        //                                           (category.userId ?? 0)??null,
+        //  );
+
+        //  assigne="${Assignfulldata.firstName} ${Assignfulldata.lastName}";
+      });
+    }
   }
 
   void getApis() async {
@@ -142,13 +223,55 @@ class AddTaskState extends State<AddTask> {
           .toList();
     });
   }
+  // String getHtmlFromQuillController(QuillController controller) {
+  //   final delta = controller.document.toDelta();
+  //   return deltaToHtml(delta);
+  // }
+
+  // Future<void> fetchProjectList() async {
+  //   final response = await http.post(
+  //     Uri.parse(
+  //         'https://pw-bms-dev.portalwiz.in/laravelapi/public/api/fetch_project_list'),
+  //     headers: <String, String>{
+  //       'Content-Type': 'application/json; charset=UTF-8',
+  //     },
+  //     body: jsonEncode({"account_id": "1100"}),
+  //   );
+
+  //   if (response.statusCode == 200) {
+  //     final List<dynamic> data = jsonDecode(response.body);
+  //     setState(() {
+  //       projectList = data.map((project) {
+  //         return {
+  //           'project_name': project['project_name'],
+  //           'project_id': project['project_id'],
+  //         };
+  //       }).toList();
+  //       // Initialize filteredItems with the full list
+  //       filteredItems = List.from(projectList);
+  //     });
+  //   } else {
+  //     throw Exception('Failed to load project list');
+  //   }
+  // }
+
+  // void handleTextChange(String value) {
+  //   setState(() {
+  //     showDropdown = value.isNotEmpty && checkEdit;
+  //     filteredItems = projectList
+  //         .where((project) => project['project_name']
+  //             .toLowerCase()
+  //             .contains(value.toLowerCase()))
+  //         .toList();
+  //   });
+  // }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
           title: const Text(
-            "Add Task",
+            "Edit Task",
             style: TextStyle(color: Colors.black, fontWeight: FontWeight.w300),
           ),
           backgroundColor: Colors.white,
@@ -161,26 +284,68 @@ class AddTaskState extends State<AddTask> {
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    TextField(
-                      controller: textTtile,
-                      decoration: InputDecoration(
-                        labelText: widget.title,
-                        hintText: widget.title,
-                        hintStyle: TextStyle(fontSize: 18),
-                        border: OutlineInputBorder(),
-                        contentPadding: EdgeInsets.symmetric(
-                            vertical: 10.0, horizontal: 12.0),
-                      ),
-                      enabled: false,
-                      style: TextStyle(fontSize: 18),
+                    Stack(
+                      children: [
+                        TextField(
+                          controller: textTtile,
+                          decoration: InputDecoration(
+                            labelText: widget.title,
+                            hintText: "Project Name",
+                            hintStyle: TextStyle(fontSize: 18),
+                            border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(
+                                vertical: 10.0, horizontal: 12.0),
+                          ),
+                          enabled: checkEdit,
+                          style: TextStyle(fontSize: 18),
+                          onChanged: handleTextChange,
+                        ),
+                        Positioned(
+                          right: 0,
+                          child: IconButton(
+                            icon: Icon(
+                                checkEdit ? Icons.check_circle : Icons.edit),
+                            onPressed: () {
+                              setState(() {
+                                checkEdit = !checkEdit;
+                                showDropdown = false;
+                                if (!checkEdit) {
+                                  textTtile.text = widget.title;
+                                }
+                              });
+                            },
+                          ),
+                        ),
+                      ],
                     ),
+                    if (showDropdown && checkEdit)
+                      Container(
+                        height: 300,
+                        child: CustomSearchDropdown(
+                          items: filteredItems,
+                          selectedItem: selectedProject,
+                          onChanged: (value) {
+                            setState(() {
+                              selectedProject = value;
+                              textTtile.text = value!;
+                              showDropdown = false;
+                              checkEdit = false;
+                            });
+                          },
+                        ),
+                      ),
                     SizedBox(height: 16),
                     Stack(
                       children: [
-                        QuillEditor.basic(
-                          configurations: QuillEditorConfigurations(
-                              controller: editingtext),
-                          focusNode: FocusNode(),
+                        TextField(
+                          controller: taskArea,
+                          decoration: InputDecoration(
+                            labelText: "Enter Task Description",
+                            border: OutlineInputBorder(),
+                            hintText: "Enter Task Description",
+                          ),
+                          maxLines: 3,
+                          readOnly: false,
                         ),
                         Positioned(
                           right: 0,
@@ -222,14 +387,16 @@ class AddTaskState extends State<AddTask> {
                         ),
                       ],
                     ),
+
                     SizedBox(height: 16),
+
                     Container(
                       padding: const EdgeInsets.all(16.0),
                       decoration: BoxDecoration(
                         color: Color.fromARGB(255, 206, 236, 255),
                         borderRadius: BorderRadius.circular(8),
                         boxShadow: [
-                          BoxShadow(color: Colors.black26, blurRadius: 4),
+                          BoxShadow(color: Colors.black26, blurRadius: 4)
                         ],
                       ),
                       child: Column(
@@ -243,9 +410,8 @@ class AddTaskState extends State<AddTask> {
                                   Text(
                                     "Est. Effort: ",
                                     style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold),
                                   ),
                                   SizedBox(width: 8),
                                   SizedBox(
@@ -267,9 +433,7 @@ class AddTaskState extends State<AddTask> {
                               Text(
                                 "Actual Effort: 00",
                                 style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                    fontSize: 16, fontWeight: FontWeight.bold),
                               ),
                             ],
                           ),
@@ -297,7 +461,79 @@ class AddTaskState extends State<AddTask> {
                       ),
                     ),
 
-                    SizedBox(height: 10),
+                    // SizedBox(height: 16),
+
+                    // // Quill Editor
+                    // Container(
+                    //   padding: const EdgeInsets.all(16.0),
+                    //   decoration: BoxDecoration(
+                    //     border: Border.all(color: Colors.grey[300]!),
+                    //     borderRadius: BorderRadius.circular(8),
+                    //   ),
+                    //   child: QuillEditor.basic(
+                    //     configurations: QuillEditorConfigurations(
+                    //       placeholder: "Enter Task Here...",
+                    //       showCursor: true,
+                    //       controller: editingtext,
+                    //       sharedConfigurations: const QuillSharedConfigurations(
+                    //         locale: Locale('de'),
+                    //       ),
+                    //     ),
+                    //   ),
+                    // ),
+
+                    // SizedBox(height: 10),
+
+                    // Center(
+                    //   child: TextButton(
+                    //     style: TextButton.styleFrom(
+                    //       foregroundColor: Colors.black,
+                    //       padding: EdgeInsets.symmetric(
+                    //           vertical: 5.0, horizontal: 40.0),
+                    //       backgroundColor: Color.fromARGB(255, 69, 73, 76),
+                    //       minimumSize: Size(100, 40),
+                    //     ),
+                    //     onPressed: () {
+                    //       showDialog(
+                    //         context: context,
+                    //         builder: (context) {
+                    //           return Dialog(
+                    //             child: Container(
+                    //               padding: EdgeInsets.all(16.0),
+                    //               child: QuillToolbar.simple(
+                    //                 configurations:
+                    //                     QuillSimpleToolbarConfigurations(
+                    //                   controller: editingtext,
+                    //                   showFontFamily: false,
+                    //                   showUndo: false,
+                    //                   showRedo: false,
+                    //                   showSearchButton: false,
+                    //                   showHeaderStyle: false,
+                    //                   showBackgroundColorButton: false,
+                    //                   showColorButton: false,
+                    //                   showSubscript: false,
+                    //                   showSuperscript: false,
+                    //                   sharedConfigurations:
+                    //                       const QuillSharedConfigurations(
+                    //                     locale: Locale('de'),
+                    //                   ),
+                    //                 ),
+                    //               ),
+                    //             ),
+                    //           );
+                    //         },
+                    //       );
+                    //     },
+                    //     child: Text(
+                    //       "Edit Text",
+                    //       style: TextStyle(
+                    //           fontWeight: FontWeight.w400,
+                    //           fontSize: 16,
+                    //           color: Colors.white), // Increased font size
+                    //     ),
+                    //   ),
+                    // ),
+                    SizedBox(height: 16),
                     Row(
                       children: [
                         Expanded(
@@ -535,6 +771,79 @@ class AddTaskState extends State<AddTask> {
                       ],
                     ),
 
+                    // SizedBox(height: 16),
+
+                    // // Quill Editor
+                    // Container(
+                    //   padding: const EdgeInsets.all(16.0),
+                    //   decoration: BoxDecoration(
+                    //     border: Border.all(color: Colors.grey[300]!),
+                    //     borderRadius: BorderRadius.circular(8),
+                    //   ),
+                    //   child: QuillEditor.basic(
+                    //     configurations: QuillEditorConfigurations(
+                    //       placeholder: "Enter Task Here...",
+                    //       showCursor: true,
+                    //       controller: editingtext,
+                    //       sharedConfigurations: const QuillSharedConfigurations(
+                    //         locale: Locale('de'),
+                    //       ),
+                    //     ),
+                    //   ),
+                    // ),
+
+                    // SizedBox(height: 10),
+
+                    // Center(
+                    //   child: TextButton(
+                    //     style: TextButton.styleFrom(
+                    //       foregroundColor: Colors.black,
+                    //       padding: EdgeInsets.symmetric(
+                    //           vertical: 5.0, horizontal: 40.0),
+                    //       backgroundColor: Color.fromARGB(255, 69, 73, 76),
+                    //       minimumSize: Size(100, 40),
+                    //     ),
+                    //     onPressed: () {
+                    //       showDialog(
+                    //         context: context,
+                    //         builder: (context) {
+                    //           return Dialog(
+                    //             child: Container(
+                    //               padding: EdgeInsets.all(16.0),
+                    //               child: QuillToolbar.simple(
+                    //                 configurations:
+                    //                     QuillSimpleToolbarConfigurations(
+                    //                   controller: editingtext,
+                    //                   showFontFamily: false,
+                    //                   showUndo: false,
+                    //                   showRedo: false,
+                    //                   showSearchButton: false,
+                    //                   showHeaderStyle: false,
+                    //                   showBackgroundColorButton: false,
+                    //                   showColorButton: false,
+                    //                   showSubscript: false,
+                    //                   showSuperscript: false,
+                    //                   sharedConfigurations:
+                    //                       const QuillSharedConfigurations(
+                    //                     locale: Locale('de'),
+                    //                   ),
+                    //                 ),
+                    //               ),
+                    //             ),
+                    //           );
+                    //         },
+                    //       );
+                    //     },
+                    //     child: Text(
+                    //       "Edit Text",
+                    //       style: TextStyle(
+                    //           fontWeight: FontWeight.w400,
+                    //           fontSize: 16,
+                    //           color: Colors.white), // Increased font size
+                    //     ),
+                    //   ),
+                    // ),
+
                     SizedBox(
                       height: MediaQuery.of(context).size.height * 0.02,
                     ),
@@ -689,6 +998,21 @@ class AddTaskState extends State<AddTask> {
             )));
   }
 
+  // Widget _buildCheckbox(
+  //     String label, bool value, ValueChanged<bool?> onChanged) {
+  //   return Row(
+  //     children: [
+  //       Checkbox(value: value, onChanged: onChanged),
+  //       Text(
+  //         label,
+  //         style: TextStyle(fontSize: 14),
+  //       ),
+  //     ],
+  //   );
+  //                   // Text(editingtext.getPlainText().toString()),
+
+  // }
+
   Widget _buildCheckbox(
       String label, bool value, ValueChanged<bool?> onChanged) {
     return Row(
@@ -703,50 +1027,13 @@ class AddTaskState extends State<AddTask> {
   }
 
   Future<void> _submitTask() async {
-    // Input validation
-    if (textTtile.text.isEmpty) {
-      Fluttertoast.showToast(
-        msg: "Task title cannot be empty.",
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-      );
-      return;
-    }
-    print(editingtext.plainTextEditingValue.text);
-    if (editingtext.plainTextEditingValue.text.isEmpty) {
-      Fluttertoast.showToast(
-        msg: "Task description cannot be empty.",
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-      );
-      return;
-    }
-    print(esStart);
-    if (esStart == DateTime.parse("0000-01-01 00:00:00.000") ||
-        esEnd == DateTime.parse("0000-01-01 00:00:00.000") ||
-        planStart == DateTime.parse("0000-01-01 00:00:00.000") ||
-        planEnd == DateTime.parse("0000-01-01 00:00:00.000")) {
-      Fluttertoast.showToast(
-        msg: "Start and end dates must be selected.",
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-      );
-      return;
-    }
-
-    // Additional check for actual dates if needed
-    if (actStart == null || actEnd == null) {
-      // You might choose to include this validation or handle it differently
-      // depending on whether actual dates are mandatory for submission.
-    }
-
     setState(() {
       _isLoading = true;
     });
 
     SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
     final url = Uri.parse(
-        'https://portalwiz.net/laravelapi/public/api/add_project_tasks');
+        'https://portalwiz.net/laravelapi/public/api/update_project_tasks');
 
     var requestBody = {
       "account_id": "${widget.accid}",
@@ -761,11 +1048,9 @@ class AddTaskState extends State<AddTask> {
       "plan_start_date":
           "${planStart.year}-${planStart.month}-${planStart.day}",
       "plan_end_date": "${planEnd.year}-${planEnd.month}-${planEnd.day}",
-      "act_start_date": actStart != null
-          ? "${actStart.year}-${actStart.month}-${actStart.day}"
-          : "",
-      "act_end_date":
-          actEnd != null ? "${actEnd.year}-${actEnd.month}-${actEnd.day}" : "",
+      "act_start_date": "",
+      "act_end_date": "",
+      "project_task_id": "${widget.projecttaskid}",
       "act_efforts": "",
       "collaborators_id": assignedtp.map((e) => e.value).toList(),
       "created_by": "${sharedPreferences.getInt("user_id")}",
@@ -789,28 +1074,44 @@ class AddTaskState extends State<AddTask> {
       );
 
       if (response.statusCode == 200) {
-        Fluttertoast.showToast(
-          msg: "Task has been submitted successfully!",
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
+        print(response.body);
+        // Show success snackbar
+        Get.showSnackbar(
+          GetSnackBar(
+            title: "Task Status",
+            message: "Task submitted successfully!",
+            snackPosition: SnackPosition.BOTTOM,
+            duration: Duration(seconds: 2),
+          ),
         );
-      } else {
-        print('Server Error: ${response.statusCode} - ${response.body}');
 
-        Fluttertoast.showToast(
-          msg: "Failed to submit task. Please try again.",
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
+        Fluttertoast.showToast(msg: "${response.body}");
+      } else {
+        // Show error snackbar
+        Get.showSnackbar(
+          GetSnackBar(
+            title: "Task Status",
+            message: "Failed to submit task: ${response.body}",
+            snackPosition: SnackPosition.BOTTOM,
+            duration: Duration(seconds: 2),
+          ),
         );
+        Fluttertoast.showToast(msg: "Failed to submit task: ${response.body}");
+        print('Server Error: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
-      print('Exception: $e');
-
-      Fluttertoast.showToast(
-        msg: "An error occurred. Please try again.",
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
+      // Show error snackbar
+      Get.showSnackbar(
+        GetSnackBar(
+          title: "Task Status",
+          message: "An error occurred: $e",
+          snackPosition: SnackPosition.BOTTOM,
+          duration: Duration(seconds: 2),
+        ),
       );
+      Fluttertoast.showToast(msg: "An error occurred: $e");
+
+      print('Exception: $e');
     } finally {
       setState(() {
         _isLoading = false;
@@ -820,13 +1121,9 @@ class AddTaskState extends State<AddTask> {
 }
 
 class GetDatePicker extends StatefulWidget {
-  GetDatePicker({
-    required this.getselectedate,
-    required this.getexacttime,
-  });
-
+  GetDatePicker({required this.getselectedate, required this.getexacttime});
   DateTime getselectedate;
-  final Function(DateTime) getexacttime;
+  Function(DateTime) getexacttime;
 
   @override
   State<StatefulWidget> createState() {
@@ -839,33 +1136,25 @@ class GetDatePickerState extends State<GetDatePicker> {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () async {
-        // Ensure the initialDate is within the valid range
-        DateTime initialDate = widget.getselectedate.year < 1000
-            ? DateTime.now()
-            : widget.getselectedate;
-
         DateTime? datetime = await showDatePicker(
-          context: context,
-          initialDate: initialDate,
-          firstDate: DateTime(1000),
-          lastDate: DateTime(3000),
-        );
-
-        if (datetime != null) {
-          setState(() {
-            widget.getselectedate = datetime;
-          });
-          widget.getexacttime(datetime);
-        }
+            context: context,
+            firstDate: DateTime(1000),
+            lastDate: DateTime(3000));
+        setState(() {
+          widget.getselectedate = datetime ?? DateTime.now();
+        });
+        widget.getexacttime(widget.getselectedate);
       },
       child: Text(
-        widget.getselectedate.year < 1000
+        (widget.getselectedate.year.toString() == "0")
             ? "dd-mm-yyyy"
-            : "${widget.getselectedate.day}/${widget.getselectedate.month}/${widget.getselectedate.year}",
-        style: TextStyle(
-          fontSize: 12,
-          color: Color.fromARGB(255, 10, 125, 182),
-        ),
+            : widget.getselectedate.day.toString() +
+                "/" +
+                widget.getselectedate.month.toString() +
+                "/" +
+                widget.getselectedate.year.toString(),
+        style:
+            TextStyle(fontSize: 12, color: Color.fromARGB(255, 10, 125, 182)),
       ),
     );
   }

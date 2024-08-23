@@ -1,41 +1,52 @@
-import 'package:bms/Screens/AttendenceDetails.dart';
+import 'dart:math';
 import 'package:bms/Screens/AttendenceReport.dart';
 import 'package:bms/Screens/DailyTasks.dart';
+import 'package:bms/Screens/Enquire.dart';
 import 'package:bms/Screens/LanderPage.dart';
+import 'package:bms/Screens/LeaveRequest.dart';
 import 'package:bms/Screens/LeaveTracker.dart';
 import 'package:flutter/material.dart';
 
 class HomeScreen extends StatelessWidget {
+  List<Map<String, dynamic>> dashboardData = [
+    {"Name": "Todays Task", "Count": 3},
+    {"Name": "Open Plans", "Count": 8},
+    {"Name": "Closed Plan", "Count": 5},
+    {"Name": "Punch Status", "Count": 0}
+  ];
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Bussiness Management System'),
+        title: const Text('Business Management System'),
         centerTitle: true,
         actions: [
           IconButton(onPressed: () {}, icon: Icon(Icons.notifications))
         ],
       ),
-      body: Container(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Welcome to the Bms',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
+      body: SingleChildScrollView(
+        scrollDirection: Axis.vertical,
+        child: Container(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Welcome to the Bms',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
                 ),
-              ),
-              SizedBox(height: 20),
-              Expanded(
-                child: GridView.count(
+                SizedBox(height: 20),
+                GridView.count(
+                  shrinkWrap: true,
                   crossAxisCount: 2,
                   crossAxisSpacing: 10,
                   mainAxisSpacing: 10,
+                  physics: NeverScrollableScrollPhysics(),
                   children: [
                     HomeCard(
                       icon: Icons.task_sharp,
@@ -47,17 +58,18 @@ class HomeScreen extends StatelessWidget {
                     ),
                     HomeCard(
                       icon: Icons.person,
-                      title: 'Dialy Plans',
+                      title: 'Daily Plans',
                       onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
                               builder: (context) => DailyTasks(
                                     title: "Daily Tasks",
+                                    today: true,
                                   ))),
                     ),
                     HomeCard(
                       icon: Icons.track_changes,
-                      title: 'Leave Tracking',
+                      title: 'Leave Tracker',
                       onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -71,10 +83,145 @@ class HomeScreen extends StatelessWidget {
                           MaterialPageRoute(
                               builder: (context) => AttendanceReportPage())),
                     ),
+                    HomeCard(
+                      icon: Icons.people,
+                      title: 'Enquiries',
+                      onTap: () => Navigator.push(context,
+                          MaterialPageRoute(builder: (context) => MyEnquire())),
+                    ),
                   ],
                 ),
-              ),
-            ],
+                SizedBox(
+                  height: 25,
+                ),
+                const Padding(
+                  padding: EdgeInsets.all(5.0),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.smart_button_outlined,
+                        color: Colors.blueAccent,
+                      ),
+                      SizedBox(
+                        width: 10,
+                      ),
+                      Text(
+                        "Todays Smart Views",
+                        style: TextStyle(
+                          fontSize: 22,
+                          color: Colors.blueAccent,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Card(
+                    margin: EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+                    color: Colors.grey.shade100,
+                    elevation: 6,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: dashboardData.length,
+                          padding: EdgeInsets.zero,
+                          itemBuilder: (context, ind) {
+                            if (ind == 0) {
+                              return Column(
+                                children: [
+                                  // Padding(
+                                  //   padding: const EdgeInsets.all(10.0),
+                                  //   child: Row(
+                                  //     children: [
+                                  //       Icon(Icons.smart_button_outlined,color: Colors.blueAccent,),
+                                  //       SizedBox(width: 10,),
+                                  //       Text("Smart Views",style: TextStyle(fontSize: 16,color: Colors.blueAccent,),),
+                                  //     ],
+                                  //   ),
+                                  // ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 20, vertical: 10),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            CircleAvatar(
+                                              radius: 6,
+                                              backgroundColor: Colors.primaries[
+                                                  Random().nextInt(
+                                                      Colors.primaries.length)],
+                                            ),
+                                            SizedBox(width: 15),
+                                            Text(
+                                              "${dashboardData[ind]["Name"]}",
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w400,
+                                                color: Colors.grey.shade600,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        Text(
+                                          "${dashboardData[ind]["Count"]}",
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            color: Colors.grey.shade500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              );
+                            } else {
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 20, vertical: 10),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        CircleAvatar(
+                                          radius: 6,
+                                          backgroundColor: Colors.primaries[
+                                              Random().nextInt(
+                                                  Colors.primaries.length)],
+                                        ),
+                                        SizedBox(width: 15),
+                                        Text(
+                                          "${dashboardData[ind]["Name"]}",
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w400,
+                                            color: Colors.grey.shade600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    Text(
+                                      "${dashboardData[ind]["Count"]}",
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.grey.shade500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
+                          }),
+                    ))
+              ],
+            ),
           ),
         ),
       ),
@@ -113,73 +260,6 @@ class HomeCard extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class AppDrawer extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: <Widget>[
-          DrawerHeader(
-            decoration: BoxDecoration(
-              color: Colors.blue,
-            ),
-            child: Text(
-              'Welcome',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-              ),
-            ),
-          ),
-          ListTile(
-            leading: Icon(Icons.home),
-            title: Text('Resident Home'),
-            onTap: () {
-              Navigator.pushNamed(context, '/residentHome');
-            },
-          ),
-          ListTile(
-            leading: Icon(Icons.admin_panel_settings),
-            title: Text('Admin Home'),
-            onTap: () {
-              Navigator.pushNamed(context, '/adminHome');
-            },
-          ),
-          ListTile(
-            leading: Icon(Icons.person),
-            title: Text('Staff Home'),
-            onTap: () {
-              Navigator.pushNamed(context, '/staffHome');
-            },
-          ),
-          ListTile(
-            leading: Icon(Icons.assignment),
-            title: Text('Assign Issue'),
-            onTap: () {
-              Navigator.pushNamed(context, '/assignIssue');
-            },
-          ),
-          ListTile(
-            leading: Icon(Icons.report),
-            title: Text('Reports'),
-            onTap: () {
-              Navigator.pushNamed(context, '/reports');
-            },
-          ),
-          ListTile(
-            leading: Icon(Icons.create),
-            title: Text('Submit Issue'),
-            onTap: () {
-              Navigator.pushNamed(context, '/submitIssue');
-            },
-          ),
-        ],
       ),
     );
   }

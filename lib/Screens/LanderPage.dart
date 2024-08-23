@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:bms/Screens/Activepage.dart';
 import 'package:bms/Screens/AddProject.dart';
 import 'package:bms/Screens/AttendenceReport.dart';
+
 import 'package:bms/Screens/DailyTasks.dart';
 import 'package:bms/Screens/DashBoardScreen.dart';
 import 'package:bms/Screens/Enquire.dart';
@@ -261,7 +262,7 @@ class LanderPageState extends State<LanderPage>
     fetchAttendanceData();
 
     getPunched();
-    ApiCalls.getDataofCards(1.toString());
+    ApiCalls.getDataofCards(1.toString(), [], [], [], [], [], [], []);
     dataOfCards;
     _determinePosition();
     tabController = TabController(length: 6, vsync: this, initialIndex: 0);
@@ -378,71 +379,138 @@ class LanderPageState extends State<LanderPage>
       final pref = await SharedPreferences.getInstance();
       Uri urlfetchAttendance = Uri.parse(
           "https://portalwiz.net/laravelapi/public/api/fetch_attendance");
+
       var payloadForFetch = {
-        "account_id": pref.getInt('account_id').toString(),
-        "user_id": pref.getInt('user_id').toString(),
+        "account_id": pref.getInt('account_id')?.toString() ?? '',
+        "user_id": pref.getInt('user_id')?.toString() ?? '',
       };
+
       final responseAttendance =
           await http.post(urlfetchAttendance, body: payloadForFetch);
+
       if (responseAttendance.statusCode == 200) {
         var data = jsonDecode(responseAttendance.body);
+        var latestRecord = data.first;
+        if (data.isNotEmpty) {
+          // Get the latest record (assuming the first one is the latest)
 
-        if (data['punch_status'] == 0) {
-          print(data["data"].last["time"].split(":")[0]);
-          DateTime checkinTime = DateTime(
-            DateTime.now().year,
-            DateTime.now().month,
-            DateTime.now().day,
-            int.parse(data["data"].last["time"].split(":")[0]),
-            int.parse(data["data"].last["time"].split(":")[1]),
-            int.parse(data["data"].last["time"].split(":")[2]),
-          );
+          int attendanceId = latestRecord['attendance_id'];
+          await pref.setInt('attendance_id', attendanceId);
+          print('Stored attendance_id: $attendanceId');
+          print('Stored data: $data');
 
-          DateTime currentDate = DateTime.now().subtract(Duration(
-              hours: checkinTime.hour,
-              minutes: checkinTime.minute,
-              seconds: checkinTime.second));
-          _stopWatchTimer.clearPresetTime();
-          _stopWatchTimer.setPresetHoursTime(currentDate.hour);
-          _stopWatchTimer.setPresetMinuteTime(currentDate.minute);
-          _stopWatchTimer.setPresetSecondTime(currentDate.second);
-          _stopWatchTimer.onStartTimer();
+          String? inTimeStr = latestRecord['in_time'];
+          String? dateStr = latestRecord['date'];
+          String? outTime = latestRecord['out_time'];
+
+          if (((inTimeStr != null) || (dateStr != null) || (outTime != null)) &&
+              ("${latestRecord['punch_status']}"
+                  .toLowerCase()
+                  .contains('in'))) {
+            DateTime checkinDateTime = DateTime.parse('$dateStr $inTimeStr');
+
+            DateTime currentDate = DateTime.now();
+
+            // Calculate the difference in time
+            if (currentDate.isAfter(checkinDateTime)) {
+              Duration timeDifference = currentDate.difference(checkinDateTime);
+
+              // Use the time difference for setting the timer
+              _stopWatchTimer.clearPresetTime();
+              _stopWatchTimer.setPresetHoursTime(timeDifference.inHours);
+              _stopWatchTimer
+                  .setPresetMinuteTime(timeDifference.inMinutes.remainder(60));
+              _stopWatchTimer
+                  .setPresetSecondTime(timeDifference.inSeconds.remainder(60));
+              _stopWatchTimer.onStartTimer();
+            } else {
+              _stopWatchTimer.clearPresetTime();
+              _stopWatchTimer.setPresetHoursTime(0);
+              _stopWatchTimer.setPresetMinuteTime(0);
+              _stopWatchTimer.setPresetSecondTime(0);
+              _stopWatchTimer.onStartTimer();
+            }
+
+            return {
+              'punch_status':
+                  "${latestRecord['punch_status']}".toLowerCase().contains('in')
+                      ? 0
+                      : 1,
+              'time':
+                  "${latestRecord['punch_status']}".toLowerCase().contains('in')
+                      ? latestRecord['in_time']
+                      : latestRecord['out_time'],
+              'created_at': latestRecord['created_at'],
+            };
+          } else {
+            _stopWatchTimer.onStopTimer();
+
+            return {
+              'punch_status':
+                  "${latestRecord['punch_status']}".toLowerCase().contains('in')
+                      ? 0
+                      : 1,
+              'time': latestRecord['punch_status'].contains('in')
+                  ? latestRecord['in_time']
+                  : latestRecord['out_time'],
+              'created_at': latestRecord['created_at'],
+            };
+          }
+        } else {
+          throw Exception('No attendance data available');
         }
-
-        return {
-          'punch_status': data['punch_status'] ?? 0,
-          'time': getTime(responseAttendance) ?? 0,
-          'created_at': data['data'] != null && data['data'].isNotEmpty
-              ? data['data'][0]['created_at']
-              : null
-        };
       } else {
         throw Exception('Failed to fetch attendance data');
       }
     } catch (e) {
-      print(e);
+      print("Exception $e");
       return null;
     }
   }
 
-  Future<int?> handlePunchInOut() async {
+  Future<int?> handlePunchInOut(int status) async {
+    print(status);
     try {
       final pref = await SharedPreferences.getInstance();
 
-      Uri url = Uri.parse(
-          'https://portalwiz.net/laravelapi/public/api/add_attendance?');
+      Uri url = Uri.parse((status == 1)
+          ? 'https://portalwiz.net/laravelapi/public/api/add_attendance'
+          : 'https://portalwiz.net/laravelapi/public/api/edit_attendance');
+
+      print(url.path);
+
+      var punchStatus = status;
+      print('Initial Punch Status: $punchStatus');
 
       var payload = {
-        "account_id": pref.getInt('account_id').toString(),
-        "user_id": pref.getInt('user_id').toString(),
-        "punch_status": pref.getInt('punch_Status').toString()
+        "attendance_id":
+            (status == 0) ? "${pref.getInt('attendance_id')}" : null,
+        "account_id": pref.getInt('account_id')?.toString() ?? '',
+        "user_id": pref.getInt('user_id')?.toString() ?? '',
+        "punch_status": (punchStatus == 0) ? "1" : "0",
       };
+      if (punchStatus == 1) {
+        payload["in_time"] =
+            "${DateTime.now().hour}:${DateTime.now().minute}:${DateTime.now().second}";
+      }
+      if (punchStatus == 0) {
+        payload["out_time"] =
+            "${DateTime.now().hour}:${DateTime.now().minute}:${DateTime.now().second}";
+      }
 
-      final response = await http.post(url, body: payload);
+      print('Request Payload: $payload');
+      final response = await http.post(
+        url,
+        body: jsonEncode(payload),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      );
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
       var data = jsonDecode(response.body.toString());
 
       if (data['success']) {
-        final punchStatus = pref.getInt('punch_Status');
         if (punchStatus == 0) {
           _stopWatchTimer.onResetTimer();
           _stopWatchTimer.onStartTimer();
@@ -454,10 +522,11 @@ class LanderPageState extends State<LanderPage>
           print('Total Work Time: $workTime');
         }
 
-        pref.setInt('punch_Status', punchStatus == 0 ? 1 : 0);
-        return punchStatus == 0
-            ? 0
-            : 1; // Return 0 for check-in and 1 for check-out
+        punchStatus = punchStatus == 0 ? 1 : 0;
+        pref.setInt('punch_Status', punchStatus);
+        print('Updated Punch Status: $punchStatus');
+
+        return punchStatus;
       } else {
         return null;
       }
@@ -506,22 +575,20 @@ class LanderPageState extends State<LanderPage>
                     FutureBuilder<Map<String, dynamic>?>(
                       future: fetchAttendanceData(),
                       builder: (context, snapshot) {
+                        print("Data55  $snapshot");
                         if (snapshot.connectionState ==
                             ConnectionState.waiting) {
                           return CircularProgressIndicator();
                         } else if (snapshot.hasError) {
                           return Text("Error: ${snapshot.error}");
+                          // } else if (!snapshot.hasData || snapshot.data == null) {
+                          //   return Text("No attendance data available.");
                         } else {
-                          final status = snapshot.data != null
-                              ? snapshot.data!['punch_status']
-                              : 1;
-                          final time = snapshot.data != null
-                              ? snapshot.data!['time']
-                              : null;
-                          final createdAt = snapshot.data != null
-                              ? snapshot.data!['created_at']
-                              : null;
-                          print(snapshot.data);
+                          var data = snapshot?.data;
+                          var punchStatus = data?['punch_status'] ?? 1;
+                          var time = data?['time'];
+                          var createdAt = data?['created_at'];
+
                           DateTime? createdDateTime;
                           String formattedDate = '';
 
@@ -531,16 +598,24 @@ class LanderPageState extends State<LanderPage>
                                 .format(createdDateTime);
                           }
 
+                          String displayTime = '';
+                          if (punchStatus == 0) {
+                            displayTime = time != null
+                                ? "Checked In Time: $time\n($formattedDate)"
+                                : "Not Checked In Yet";
+                          } else {
+                            displayTime = time != null
+                                ? "Checked Out Time: $time\n($formattedDate)"
+                                : "Not Checked Out Yet";
+                          }
+
                           return Column(
                             children: [
-                              if (time != null && createdDateTime != null)
-                                Text(
-                                  status == 0
-                                      ? "Checked In Time: $time\n($formattedDate)"
-                                      : "Checked Out Time: $time\n($formattedDate)",
-                                  style: TextStyle(fontSize: 18),
-                                  textAlign: TextAlign.center,
-                                ),
+                              Text(
+                                displayTime,
+                                style: TextStyle(fontSize: 18),
+                                textAlign: TextAlign.center,
+                              ),
                               SizedBox(height: 20),
                               Text(
                                 "Total in hours",
@@ -576,7 +651,11 @@ class LanderPageState extends State<LanderPage>
                                   }
 
                                   if (checkLocation) {
-                                    int? punchStatus = await handlePunchInOut();
+                                    Map<String, dynamic>? datanew =
+                                        await fetchAttendanceData();
+
+                                    int? punchStatus = await handlePunchInOut(
+                                        datanew?['punch_status'] ?? 1);
                                     if (punchStatus != null) {
                                       Navigator.of(dialogContext).pop();
                                       showLottieAnimation(
@@ -590,7 +669,7 @@ class LanderPageState extends State<LanderPage>
                                   }
                                 },
                                 child: Text(
-                                  (status == 0) ? "Check Out" : "Check In",
+                                  punchStatus == 0 ? "Check out" : "Check In",
                                   style: TextStyle(
                                       color: Colors.white, fontSize: 18),
                                 ),
@@ -599,7 +678,7 @@ class LanderPageState extends State<LanderPage>
                                       horizontal: 35, vertical: 10),
                                   shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(8)),
-                                  backgroundColor: (status == 0)
+                                  backgroundColor: punchStatus == 0
                                       ? Color.fromARGB(255, 230, 102, 102)
                                       : Color.fromARGB(255, 76, 175, 172),
                                 ),
@@ -620,9 +699,9 @@ class LanderPageState extends State<LanderPage>
   }
 
   void showLottieAnimation(int punchStatus) {
-    String animationPath = punchStatus == 0
-        ? 'asset/animation/check_in.json'
-        : 'asset/animation/Animation - 1706007655831.json';
+    String animationPath = punchStatus == 1
+        ? 'asset/animation/Animation - 1706007655831.json'
+        : 'asset/animation/check_in.json';
 
     showDialog(
       context: context,
@@ -692,19 +771,19 @@ class LanderPageState extends State<LanderPage>
             // Visibility(
             //   visible: roleId == 1,
             //   child:
-            ListTile(
-              title: const Text("Projects"),
-              leading: const Icon(Icons.add_box),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ProjectManagementScreen(),
-                  ),
-                );
-              },
-            ),
+            // ListTile(
+            //   title: const Text("Projects"),
+            //   leading: const Icon(Icons.add_box),
+            //   onTap: () {
+            //     Navigator.pop(context);
+            //     Navigator.push(
+            //       context,
+            //       MaterialPageRoute(
+            //         builder: (context) => ProjectManagementScreen(),
+            //       ),
+            //     );
+            //   },
+            // ),
 
             ListTile(
               title: const Text("Attendence"),
@@ -739,8 +818,10 @@ class LanderPageState extends State<LanderPage>
                 Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (context) =>
-                            DailyTasks(title: "Daily PLans")));
+                        builder: (context) => DailyTasks(
+                              title: "Daily PLans",
+                              today: true,
+                            )));
               },
             ),
             // ListTile(
@@ -779,7 +860,7 @@ class LanderPageState extends State<LanderPage>
             //   visible: roleId == 1,
             //   child:
             ListTile(
-              title: const Text("Leave Tracker "),
+              title: const Text("My Leaves "),
               leading: const Icon(Icons.work),
               onTap: () {
                 Navigator.pop(context);
@@ -787,10 +868,11 @@ class LanderPageState extends State<LanderPage>
                     MaterialPageRoute(builder: (context) => LeaveTracker()));
               },
             ),
+
             Visibility(
               visible: roleId == 1,
               child: ListTile(
-                title: const Text("Leave Requests "),
+                title: const Text("Leave Management "),
                 leading: const Icon(Icons.work),
                 onTap: () {
                   Navigator.pop(context);
@@ -832,7 +914,7 @@ class LanderPageState extends State<LanderPage>
               },
             ),
             ListTile(
-              title: const Text("Version 1.1.0"),
+              title: const Text("Version 1.1.0(91)"),
               leading: const Icon(Icons.mobile_friendly),
               onTap: () async {
                 showAboutDialog(context: context);
@@ -857,6 +939,22 @@ class LanderPageState extends State<LanderPage>
                     "https://portalwiz.net/laravelapi/storage/app/" +
                         profileUrl),
               ),
+              // Visibility(
+              //   visible: roleId == 1,
+              //   child:
+              IconButton(
+                icon: Icon(Icons.add_task),
+                tooltip: 'Add New Task',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ProjectManagementScreen(),
+                    ),
+                  );
+                },
+              ),
+              //  ),
             ],
           ),
           bottom: PreferredSize(
@@ -894,8 +992,8 @@ class LanderPageState extends State<LanderPage>
       body: TabBarView(
         controller: tabController,
         children: [
-          //  NotActive(),
-          Active(),
+          NotActive(),
+          //Active(),
           Hold(),
           Review(),
           Complete(),

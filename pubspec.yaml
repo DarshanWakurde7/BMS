@@ -45,7 +45,14 @@ dependencies:
   flutter_rating_stars: ^1.1.0
   animated_emoji: ^3.1.0
   animated_toggle_switch: ^0.8.2
-  dropdown_search: ^5.0.2
+  just_audio: ^0.9.39
+  record: ^5.1.2
+  audio_video_progress_bar: ^2.0.3
+  
+  
+  
+  
+  html: ^0.15.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

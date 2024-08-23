@@ -1,3 +1,4 @@
+import 'package:bms/ApiCalls/apiCalls.dart';
 import 'package:flutter/material.dart';
 
 class CreditLeaveDialog extends StatefulWidget {
@@ -11,12 +12,24 @@ class _CreditLeaveDialogState extends State<CreditLeaveDialog> {
   int _leaveCount = 0;
   int _leaveBalance = 0;
 
-  final List<String> _employees = ['Employee 1', 'Employee 2', 'Employee 3'];
-  final List<String> _leaveTypes = [
-    'Sick Leave',
-    'Casual Leave',
-    'Elective Leave'
-  ];
+  List<Map<String, dynamic>> _employees = [];
+  List<Map<String, dynamic>> _filteredEmployees = [];
+  List<Map<String, dynamic>> _leaveTypes = [];
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchEmployees();
+    _fetchLeaveTypes();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,36 +39,53 @@ class _CreditLeaveDialogState extends State<CreditLeaveDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            DropdownButtonFormField<String>(
-              value: _selectedEmployee,
-              hint: Text('Select Employee'),
-              items: _employees.map((String employee) {
-                return DropdownMenuItem<String>(
-                  value: employee,
-                  child: Text(employee),
-                );
-              }).toList(),
-              onChanged: (String? newValue) {
-                setState(() {
-                  _selectedEmployee = newValue;
-                  _fetchLeaveBalance(newValue);
-                });
-              },
+            GestureDetector(
+              onTap: () => _showEmployeeDropdown(),
+              child: AbsorbPointer(
+                child: InputDecorator(
+                  decoration: InputDecoration(
+                    labelText: 'Select Employee',
+                    border: OutlineInputBorder(),
+                  ),
+                  child: Text(
+                    _selectedEmployee != null
+                        ? _employees.firstWhere(
+                                (e) =>
+                                    e['employee_id'].toString() ==
+                                    _selectedEmployee,
+                                orElse: () => {
+                                      'first_name': '',
+                                      'last_name': ''
+                                    })['first_name'] +
+                            ' ' +
+                            _employees.firstWhere(
+                                (e) =>
+                                    e['employee_id'].toString() ==
+                                    _selectedEmployee,
+                                orElse: () => {
+                                      'first_name': '',
+                                      'last_name': ''
+                                    })['last_name']
+                        : 'Select Employee',
+                  ),
+                ),
+              ),
             ),
             SizedBox(height: 16),
             DropdownButtonFormField<String>(
               value: _selectedLeaveType,
               hint: Text('Select Leave Type'),
-              items: _leaveTypes.map((String leaveType) {
+              items: _leaveTypes.map((leaveType) {
                 return DropdownMenuItem<String>(
-                  value: leaveType,
-                  child: Text(leaveType),
+                  value: leaveType['request_type_id'].toString(),
+                  child: Text(leaveType['request_type']),
                 );
               }).toList(),
               onChanged: (String? newValue) {
                 setState(() {
                   _selectedLeaveType = newValue;
                 });
+                _fetchLeaveBalanceIfNeeded(); // Fetch leave balance if both are selected
               },
             ),
             SizedBox(height: 16),
@@ -124,20 +154,129 @@ class _CreditLeaveDialogState extends State<CreditLeaveDialog> {
     );
   }
 
-  void _fetchLeaveBalance(String? employee) {
-    // Simulating an API call to fetch leave balance for the selected employee
-    // Replace this with actual API call
+  void _fetchLeaveTypes() async {
+    try {
+      List<Map<String, dynamic>> leaveTypes = await ApiCalls.fetchLeaveTypes();
+      setState(() {
+        _leaveTypes = leaveTypes;
+      });
+    } catch (e) {
+      print('Failed to fetch leave types: $e');
+    }
+  }
+
+  void _showEmployeeDropdown() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Select Employee'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  labelText: 'Search',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (String query) {
+                  setState(() {
+                    _searchQuery = query;
+                    _filterEmployees();
+                  });
+                },
+              ),
+              SizedBox(height: 8),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: _filteredEmployees.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    if (_filteredEmployees.isEmpty) {
+                      return Center(child: Text('No results found'));
+                    }
+                    final employee = _filteredEmployees[index];
+                    return ListTile(
+                      title: Text(
+                          '${employee['first_name']} ${employee['last_name']}'),
+                      onTap: () {
+                        setState(() {
+                          _selectedEmployee =
+                              employee['employee_id'].toString();
+                        });
+                        _fetchLeaveBalanceIfNeeded(); // Fetch leave balance if both are selected
+                        Navigator.of(context).pop();
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _fetchEmployees() async {
+    try {
+      List<Map<String, dynamic>> employees =
+          await ApiCalls.fetchEmployeesDropdown(
+              '1100'); // Replace with your account ID
+      setState(() {
+        _employees = employees;
+        _filteredEmployees = employees;
+      });
+    } catch (e) {
+      print('Failed to fetch employees: $e');
+    }
+  }
+
+  void _filterEmployees() {
     setState(() {
-      _leaveBalance = 10; // Example balance
+      if (_searchQuery.isEmpty) {
+        _filteredEmployees = _employees;
+      } else {
+        _filteredEmployees = _employees.where((employee) {
+          final fullName = '${employee['first_name']} ${employee['last_name']}';
+          final queryLowerCase = _searchQuery.toLowerCase();
+          final fullNameLowerCase = fullName.toLowerCase();
+          return fullNameLowerCase.contains(queryLowerCase);
+        }).toList();
+      }
     });
+  }
+
+  void _fetchLeaveBalanceIfNeeded() {
+    if (_selectedEmployee != null && _selectedLeaveType != null) {
+      _fetchLeaveBalance(_selectedEmployee);
+    }
+  }
+
+  void _fetchLeaveBalance(String? employeeId) async {
+    if (employeeId == null) return;
+
+    try {
+      final response = await ApiCalls.fetchLeaveBalance(
+        accountId: 1100,
+        employeeId: int.parse(employeeId),
+        requestTypeId: int.parse(_selectedLeaveType ??
+            '1'), // Defaulting to 1 if no leave type selected
+      );
+      setState(() {
+        _leaveBalance = response['balance_leave'].toInt();
+      });
+    } catch (e) {
+      print('Failed to fetch leave balance: $e');
+    }
   }
 
   void _creditLeave() {
     if (_selectedEmployee != null &&
         _selectedLeaveType != null &&
         _leaveCount > 0) {
-      print('Employee: $_selectedEmployee');
-      print('Leave Type: _selectedLeaveType');
+      print('Employee ID: $_selectedEmployee');
+      print('Leave Type: $_selectedLeaveType');
       print('Leave Count: $_leaveCount');
 
       Navigator.of(context).pop();

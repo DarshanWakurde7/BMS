@@ -1,3 +1,4 @@
+import 'package:bms/pojos/models/FilterDataPojo.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:file_picker/file_picker.dart';
@@ -5,6 +6,8 @@ import 'package:bms/ApiCalls/apiCalls.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LeaveForm extends StatefulWidget {
+  const LeaveForm({required this.refresh});
+  final Function refresh;
   @override
   _LeaveFormState createState() => _LeaveFormState();
 }
@@ -78,6 +81,8 @@ class _LeaveFormState extends State<LeaveForm> {
         _reason = '';
         _filePath = null;
       });
+      widget.refresh();
+      Navigator.pop(context);
     } catch (e) {
       print('Exception: $e');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -350,10 +355,4 @@ class _LeaveFormState extends State<LeaveForm> {
       ),
     );
   }
-}
-
-void main() {
-  runApp(MaterialApp(
-    home: LeaveForm(),
-  ));
 }

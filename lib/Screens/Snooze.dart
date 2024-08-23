@@ -54,39 +54,40 @@ class SnoozedState extends State<Snoozed> {
                   }
 
                   return myCards1(
-                    projectid: dataOfCards[index].projectTaskId ?? 0,
-                    Title: openseaController
-                            .dataofCardsSnoozed[index].projectName ??
-                        "Project Name Here",
-                    taskTypeName:
-                        openseaController.dataofCardsSnoozed[index].taskName ??
-                            "Normal",
-                    description:
-                        openseaController.dataofCardsSnoozed[index].taskName ??
-                            "Task Name",
-                    mydata: myStatus,
-                    colab: openseaController
-                            .dataofCardsSnoozed[index].collaborators ??
-                        <Collaborators>[],
-                    priority: myprority,
-                    plandate: openseaController
-                            .dataofCardsSnoozed[index].planStartDate ??
-                        "00-00-0000",
-                    todate: openseaController
-                            .dataofCardsSnoozed[index].planEndDate ??
-                        "00-00-0000",
-                    assigne: openseaController
-                            .dataofCardsSnoozed[index].assingedName ??
-                        "Donald Trumph",
-                    index: index,
-                    isFocused: dataOfCards[index].focus ?? false,
-                    data: dataOfCards[index],
-                    refresh: () {
-                      apiCallActivate();
-                    },
-                    star: dataOfCards[index].lkFeedbackId ?? 3,
-                    emoji: dataOfCards[index].smileyId ?? 1,
-                  );
+                      projectid: dataOfCards[index].projectTaskId ?? 0,
+                      Title: openseaController
+                              .dataofCardsSnoozed[index].projectName ??
+                          "Project Name Here",
+                      taskTypeName: openseaController
+                              .dataofCardsSnoozed[index].taskName ??
+                          "Normal",
+                      description: openseaController
+                              .dataofCardsSnoozed[index].taskName ??
+                          "Task Name",
+                      mydata: myStatus,
+                      colab: openseaController
+                              .dataofCardsSnoozed[index].collaborators ??
+                          <Collaborators>[],
+                      priority: myprority,
+                      plandate: openseaController
+                              .dataofCardsSnoozed[index].planStartDate ??
+                          "00-00-0000",
+                      todate: openseaController
+                              .dataofCardsSnoozed[index].planEndDate ??
+                          "00-00-0000",
+                      assigne: openseaController
+                              .dataofCardsSnoozed[index].assingedName ??
+                          "Donald Trumph",
+                      index: index,
+                      isFocused: dataOfCards[index].focus ?? false,
+                      data: dataOfCards[index],
+                      refresh: () {
+                        apiCallActivate();
+                      },
+                      star: dataOfCards[index].lkFeedbackId,
+                      emoji: dataOfCards[index].smileyId,
+                      statusString: dataOfCards[index].status ?? "",
+                      priorityString: dataOfCards[index].priorityName ?? "");
                 }));
           }
         }));

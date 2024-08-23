@@ -118,3 +118,110 @@ class CustomSearchDropdown extends StatelessWidget {
     );
   }
 }
+
+class SearchableDropdown extends StatefulWidget {
+  final String hint;
+  final List<String> items;
+  final String selectedItem;
+  final Function(String) onChanged;
+  final DropdownMenuItem<String> Function(BuildContext context, String item)
+      itemBuilder;
+
+  SearchableDropdown({
+    required this.hint,
+    required this.items,
+    required this.selectedItem,
+    required this.onChanged,
+    required this.itemBuilder,
+  });
+
+  @override
+  _SearchableDropdownState createState() => _SearchableDropdownState();
+}
+
+class _SearchableDropdownState extends State<SearchableDropdown> {
+  late List<String> filteredItems;
+  late TextEditingController searchController;
+
+  @override
+  void initState() {
+    super.initState();
+    filteredItems = widget.items;
+    searchController = TextEditingController();
+  }
+
+  void _filterItems(String query) {
+    setState(() {
+      filteredItems = widget.items
+          .where((item) => item.toLowerCase().contains(query.toLowerCase()))
+          .toList();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        showModalBottomSheet(
+          context: context,
+          builder: (context) {
+            return Padding(
+              padding:
+                  const EdgeInsets.all(16.0), // Add padding around the list
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: TextField(
+                      controller: searchController,
+                      onChanged: _filterItems,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(),
+                        labelText: 'Search',
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: ListView(
+                      children: filteredItems.map((item) {
+                        return GestureDetector(
+                          onTap: () {
+                            widget.onChanged(item);
+                            Navigator.pop(context);
+                          },
+                          child: widget.itemBuilder(context, item),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Text(
+                widget.selectedItem.isEmpty ? widget.hint : widget.selectedItem,
+                style: TextStyle(color: Colors.black),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Icon(Icons.arrow_drop_down),
+          ],
+        ),
+      ),
+    );
+  }
+}

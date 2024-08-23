@@ -31,7 +31,7 @@ class _MyEnquireState extends State<MyEnquire> {
   TextEditingController todate = TextEditingController();
   TextEditingController updatedate = TextEditingController();
   TextEditingController enqdate = TextEditingController();
-
+  DateTime date = DateTime.now();
   String dropdowndata = "select one";
 
   GetAllDropdownEnquire getAllDropDownData = GetAllDropdownEnquire();
@@ -47,9 +47,9 @@ class _MyEnquireState extends State<MyEnquire> {
 
   getdataForFirst() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    DateTime date = DateTime.now();
-    getdata([], [prefs.getInt("user_id") ?? 1], [], [],
-        "${date.month}/${date.day}/${date.year}", '', '', '', '', '', '50');
+
+    getdata([], [prefs.getInt("user_id") ?? 1], [], [], "",
+        "${date.month}/${date.day}/${date.year}", '', '', '', '', '50');
     getAllDropDownData = await ApiCalls.getAllDropDOwnsEnquire();
   }
 
@@ -65,8 +65,6 @@ class _MyEnquireState extends State<MyEnquire> {
       String enqfromdate,
       String Enqtodate,
       String EnqCount) async {
-    print(assignedtp);
-
     enquireCardsController.getEnquireCards(
         enqids,
         assigned,
@@ -266,7 +264,7 @@ class _MyEnquireState extends State<MyEnquire> {
                                   '${date!.day}/${date!.month}/${date!.year}');
                               setState(() {
                                 todate.text =
-                                    '${date!.day}/${date!.month}/${date!.year}';
+                                    '${date!.month}/${date!.day}/${date!.year}';
                               });
                             },
                             child: Icon(Icons.date_range_outlined))),
@@ -629,10 +627,27 @@ class _MyEnquireState extends State<MyEnquire> {
   }
 
   serchdata(String value) async {
+    SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
     print(value);
     List<EnquiresPojo> result;
     if (value.isEmpty) {
-      getdata([], [], [], [], '09/24/2022', '03/23/2024', '', '', '', '', '50');
+      getdata(
+          [],
+          assignedtp
+                  ?.map((id) => id.value)
+                  ?.where((value) => value != null)
+                  ?.map((value) => value!)
+                  ?.toList() ??
+              [sharedPreferences.getInt("user_id") ?? 0],
+          [],
+          [],
+          '09/24/2022',
+          '${date.month}-${date.day}-${date.year}',
+          '',
+          '',
+          '',
+          '',
+          '50');
       setState(() {
         enquireCardsController.enquiredata;
       });
